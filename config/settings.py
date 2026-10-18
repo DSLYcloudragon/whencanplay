@@ -42,7 +42,16 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-only-placeholder-not-for-p
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+# 允许访问的域名。开头带点的是通配子域（.trycloudflare.com 匹配任意子域）。
+# 换正式域名时，在 .env 里写 DJANGO_ALLOWED_HOSTS=你的域名,localhost,127.0.0.1
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in os.environ.get(
+        'DJANGO_ALLOWED_HOSTS',
+        'localhost,127.0.0.1,.trycloudflare.com',
+    ).split(',')
+    if h.strip()
+]
 
 
 # Application definition

@@ -104,3 +104,27 @@ python manage.py makemigrations # 改完 models.py 后生成迁移文件
 python manage.py createsuperuser # 新建管理员
 python manage.py shell          # 进交互式命令行，调试用
 ```
+
+---
+
+## 常见问题
+
+### `git push` 报 `Connection was reset` / `Failed to connect`
+
+国内直连 GitHub 不稳定，需要走本地代理。已经按域名配好了（只对 github.com 生效，
+不影响 gitee 等其他站点）：
+
+```powershell
+git config --global http.https://github.com.proxy http://127.0.0.1:7890
+```
+
+推之前确认代理工具是开着的。代理关掉时 `push` 会报连接被拒绝，把代理打开再推就行。
+
+### 提交前先扫一遍密钥
+
+```powershell
+git grep -n -i -E --cached -e "password\s*=" -e "secret[_-]?key" -e "api[_-]?key" -e "django-insecure"
+```
+
+输出为空（或只有占位符、说明文字）才提交。这个仓库是公开的。
+

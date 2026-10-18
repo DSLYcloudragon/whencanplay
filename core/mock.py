@@ -55,13 +55,11 @@ MEMBERS = [
 
 DAY_NAMES = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 
+STACK_LIMIT = 3   # 格子里最多堆几个头像，多的收进 +N
 
-def build_rows():
-    """返回 7 行 × 24 列的结构，直接喂给模板。
 
-    每一格是 {hour, count, names, level}。
-    level 是给 CSS 用的颜色档位（0~4），避免在模板里写判断。
-    """
+def build_grid():
+    """grid[weekday][hour] = [昵称, ...]"""
     grid = [[[] for _ in range(24)] for _ in range(7)]
 
     for member in MEMBERS:
@@ -72,35 +70,53 @@ def build_rows():
                 day_index, hour = divmod(absolute_hour, 24)
                 grid[day_index % 7][hour].append(name)
 
+    return grid
+
+
+def build_rows():
+    """按小时做行、星期做列 —— 和课表一样。
+
+    每行是 {hour, cells}，每格是 {day, day_index, count, names, level, shown, extra}。
+    level 是给 CSS 用的颜色档位（0~4），避免在模板里写判断。
+    """
+    grid = build_grid()
     rows = []
-    for day_index, day_name in enumerate(DAY_NAMES):
+
+    for hour in range(24):
         cells = []
-        for hour in range(24):
+        for day_index, day_name in enumerate(DAY_NAMES):
             names = grid[day_index][hour]
             cells.append({
+                'day': day_name,
+                'day_index': day_index,
                 'hour': hour,
                 'count': len(names),
-                'names': names,
                 'names_text': '、'.join(names),
                 'level': min(len(names), 4),
+                'shown': names[:STACK_LIMIT],
+                'extra': max(len(names) - STACK_LIMIT, 0),
             })
-        rows.append({'day': day_name, 'day_index': day_index, 'cells': cells})
+        rows.append({'hour': hour, 'cells': cells})
 
     return rows
 
 
 def build_summary(rows):
     """顶部那几个小数字。"""
-    total_slots = 0
+    covered = 0
     best = {'count': 0, 'day': '', 'hour': 0}
     for row in rows:
         for cell in row['cells']:
             if cell['count']:
-                total_slots += 1
+                covered += 1
             if cell['count'] > best['count']:
-                best = {'count': cell['count'], 'day': row['day'], 'hour': cell['hour']}
+                best = {
+                    'count': cell['count'],
+                    'day': cell['day'],
+                    'hour': row['hour'],
+                }
     return {
         'members': len(MEMBERS),
-        'covered_slots': total_slots,
+        'covered_slots': covered,
         'busiest': best,
     }

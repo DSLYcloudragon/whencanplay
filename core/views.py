@@ -16,10 +16,10 @@ def heatmap(request):
     """
     rows = mock.build_rows()
     summary = mock.build_summary(rows)
-    hours = list(range(24))
+    days = [{'index': i, 'name': n} for i, n in enumerate(mock.DAY_NAMES)]
 
     return render(request, 'core/heatmap.html', {
         'rows': rows,
-        'hours': hours,
+        'days': days,
         'summary': summary,
     })

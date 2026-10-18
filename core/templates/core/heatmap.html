@@ -24,112 +24,106 @@
       font-size: 14px;
       line-height: 1.6;
     }
-    .wrap { max-width: 1080px; margin: 0 auto; }
+    .wrap { max-width: 980px; margin: 0 auto; }
 
-    .topbar {
-      display: flex;
-      align-items: baseline;
-      gap: 12px;
-      margin-bottom: 6px;
-    }
+    .topbar { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
     h1 { margin: 0; font-size: 22px; letter-spacing: .4px; }
     .back { margin-left: auto; font-size: 13px; color: var(--muted); text-decoration: none; }
     .back:hover { color: var(--accent); }
     .sub { margin: 0 0 22px; color: var(--muted); font-size: 13px; }
 
-    .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
     .chip {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 7px 13px;
-      font-size: 13px;
-      color: var(--muted);
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 8px; padding: 7px 13px; font-size: 13px; color: var(--muted);
     }
     .chip b { color: var(--text); font-weight: 600; }
 
     .board {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 18px 20px 20px;
-      overflow-x: auto;
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 12px; padding: 16px 18px 18px;
     }
 
     .grid {
       display: grid;
-      grid-template-columns: 56px repeat(24, minmax(30px, 1fr));
-      gap: 4px;
-      min-width: 800px;
+      grid-template-columns: 52px repeat(7, minmax(0, 1fr));
+      gap: 3px;
     }
+    .corner { }
+    .dhead {
+      text-align: center;
+      font-size: 12.5px;
+      color: var(--muted);
+      padding: 2px 0 8px;
+      font-weight: 600;
+      letter-spacing: .5px;
+    }
+    .dhead.weekend { color: #c9a6ff; }
     .hlabel {
       font-size: 11px;
       color: var(--muted);
-      text-align: center;
-      padding-bottom: 2px;
-      white-space: nowrap;
-    }
-    .dlabel {
-      font-size: 12.5px;
-      color: var(--muted);
+      text-align: right;
+      padding-right: 8px;
+      height: 34px;
       display: flex;
       align-items: center;
+      justify-content: flex-end;
+      font-variant-numeric: tabular-nums;
     }
-    .dlabel.weekend { color: #c9a6ff; }
 
     .cell {
-      height: 42px;
+      height: 34px;
       border-radius: 5px;
       border: 1px solid transparent;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 12px;
-      font-weight: 600;
+      gap: 2px;
       cursor: pointer;
       transition: transform .08s ease, border-color .12s ease;
       background: rgba(255, 255, 255, .035);
-      color: transparent;
+      overflow: hidden;
     }
     .cell:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.35); }
-    .cell.lv1 { background: rgba(78,161,255,.18); color: #b9d6ff; }
-    .cell.lv2 { background: rgba(78,161,255,.36); color: #dcecff; }
-    .cell.lv3 { background: rgba(78,161,255,.58); color: #ffffff; }
-    .cell.lv4 { background: rgba(78,161,255,.85); color: #08121f; }
-    .cell.selected { border-color: #ffffff; box-shadow: 0 0 0 2px rgba(78,161,255,.45); }
-    .cell.now { outline: 1px dashed rgba(255,255,255,.55); outline-offset: 1px; }
+    .cell.lv1 { background: rgba(78,161,255,.16); }
+    .cell.lv2 { background: rgba(78,161,255,.30); }
+    .cell.lv3 { background: rgba(78,161,255,.46); }
+    .cell.lv4 { background: rgba(78,161,255,.70); }
+    .cell.selected { border-color: #fff; box-shadow: 0 0 0 2px rgba(78,161,255,.45); }
+    .cell.now { outline: 1px dashed rgba(255,255,255,.6); outline-offset: 1px; }
+
+    .av {
+      width: 19px; height: 19px; border-radius: 50%;
+      background: linear-gradient(135deg, #4ea1ff, #8a6bff);
+      color: #fff; font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex: 0 0 auto;
+      border: 1px solid rgba(0,0,0,.35);
+    }
+    .more {
+      font-size: 10.5px; font-weight: 700; color: #dbe9ff;
+      background: rgba(0,0,0,.28);
+      border-radius: 9px; padding: 1px 5px;
+      flex: 0 0 auto;
+    }
 
     .legend {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 16px;
-      font-size: 12px;
-      color: var(--muted);
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 14px; font-size: 12px; color: var(--muted);
     }
     .legend .sw { width: 22px; height: 12px; border-radius: 3px; }
 
     .detail {
-      margin-top: 18px;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 16px 20px;
-      min-height: 66px;
-      font-size: 13.5px;
+      margin-top: 16px; background: var(--panel); border: 1px solid var(--line);
+      border-radius: 12px; padding: 16px 20px; min-height: 66px; font-size: 13.5px;
     }
     .detail .hint { color: var(--muted); }
     .detail .title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
     .people { display: flex; flex-wrap: wrap; gap: 8px; }
     .person {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      background: #0f1319;
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      padding: 3px 12px 3px 4px;
-      font-size: 13px;
+      display: flex; align-items: center; gap: 7px;
+      background: #0f1319; border: 1px solid var(--line);
+      border-radius: 20px; padding: 3px 12px 3px 4px; font-size: 13px;
     }
     .avatar {
       width: 22px; height: 22px; border-radius: 50%;
@@ -158,22 +152,25 @@
 
   <div class="board">
     <div class="grid">
-      <div></div>
-      {% for hour in hours %}
-        <div class="hlabel">{% if hour|divisibleby:3 %}{{ hour|stringformat:"02d" }}{% endif %}</div>
+      <div class="corner"></div>
+      {% for day in days %}
+        <div class="dhead {% if day.index >= 5 %}weekend{% endif %}">{{ day.name }}</div>
       {% endfor %}
 
       {% for row in rows %}
-        <div class="dlabel {% if row.day_index >= 5 %}weekend{% endif %}">{{ row.day }}</div>
+        <div class="hlabel">{{ row.hour|stringformat:"02d" }}:00</div>
         {% for cell in row.cells %}
           <div class="cell lv{{ cell.level }}"
-               data-day="{{ row.day }}"
-               data-hour="{{ cell.hour }}"
+               data-day="{{ cell.day }}"
+               data-hour="{{ row.hour }}"
                data-count="{{ cell.count }}"
                data-names="{{ cell.names_text }}"
-               data-day-index="{{ row.day_index }}"
-               title="{% if cell.count %}{{ row.day }} {{ cell.hour }}:00 · {{ cell.count }} 人：{{ cell.names_text }}{% else %}{{ row.day }} {{ cell.hour }}:00 · 没人有空{% endif %}">
-            {% if cell.count %}{{ cell.count }}{% endif %}
+               data-day-index="{{ cell.day_index }}"
+               title="{% if cell.count %}{{ cell.day }} {{ row.hour }}:00 · {{ cell.count }} 人：{{ cell.names_text }}{% else %}{{ cell.day }} {{ row.hour }}:00 · 没人有空{% endif %}">
+            {% for name in cell.shown %}
+              <span class="av">{{ name|slice:":1" }}</span>
+            {% endfor %}
+            {% if cell.extra %}<span class="more">+{{ cell.extra }}</span>{% endif %}
           </div>
         {% endfor %}
       {% endfor %}
@@ -182,10 +179,10 @@
     <div class="legend">
       <span>人少</span>
       <span class="sw" style="background: rgba(255,255,255,.035)"></span>
-      <span class="sw" style="background: rgba(78,161,255,.18)"></span>
-      <span class="sw" style="background: rgba(78,161,255,.36)"></span>
-      <span class="sw" style="background: rgba(78,161,255,.58)"></span>
-      <span class="sw" style="background: rgba(78,161,255,.85)"></span>
+      <span class="sw" style="background: rgba(78,161,255,.16)"></span>
+      <span class="sw" style="background: rgba(78,161,255,.30)"></span>
+      <span class="sw" style="background: rgba(78,161,255,.46)"></span>
+      <span class="sw" style="background: rgba(78,161,255,.70)"></span>
       <span>人多</span>
       <span style="margin-left:auto">虚线圈 = 现在这个时段</span>
     </div>
@@ -229,8 +226,8 @@
 
   // 标出现在这个时段
   const now = new Date();
-  const jsDay = now.getDay();                 // 0=周日
-  const ourDay = (jsDay + 6) % 7;             // 转成 0=周一
+  const jsDay = now.getDay();
+  const ourDay = (jsDay + 6) % 7;      // 转成 0=周一
   const nowCell = document.querySelector(
     '.cell[data-day-index="' + ourDay + '"][data-hour="' + now.getHours() + '"]'
   );

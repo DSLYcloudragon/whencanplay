@@ -1,0 +1,240 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>群时间热力图 · WhenCanPlay</title>
+  <style>
+    :root {
+      --bg: #0d0f13;
+      --panel: #151920;
+      --line: #232932;
+      --text: #e6e9ef;
+      --muted: #8b93a1;
+      --accent: #4ea1ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 32px 24px 64px;
+      background: radial-gradient(1400px 700px at 50% -15%, #17202c 0%, var(--bg) 62%);
+      color: var(--text);
+      font-family: -apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .wrap { max-width: 1080px; margin: 0 auto; }
+
+    .topbar {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+    h1 { margin: 0; font-size: 22px; letter-spacing: .4px; }
+    .back { margin-left: auto; font-size: 13px; color: var(--muted); text-decoration: none; }
+    .back:hover { color: var(--accent); }
+    .sub { margin: 0 0 22px; color: var(--muted); font-size: 13px; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+    .chip {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 7px 13px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .chip b { color: var(--text); font-weight: 600; }
+
+    .board {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px 20px 20px;
+      overflow-x: auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 56px repeat(24, minmax(30px, 1fr));
+      gap: 4px;
+      min-width: 800px;
+    }
+    .hlabel {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      padding-bottom: 2px;
+      white-space: nowrap;
+    }
+    .dlabel {
+      font-size: 12.5px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+    }
+    .dlabel.weekend { color: #c9a6ff; }
+
+    .cell {
+      height: 42px;
+      border-radius: 5px;
+      border: 1px solid transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform .08s ease, border-color .12s ease;
+      background: rgba(255, 255, 255, .035);
+      color: transparent;
+    }
+    .cell:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.35); }
+    .cell.lv1 { background: rgba(78,161,255,.18); color: #b9d6ff; }
+    .cell.lv2 { background: rgba(78,161,255,.36); color: #dcecff; }
+    .cell.lv3 { background: rgba(78,161,255,.58); color: #ffffff; }
+    .cell.lv4 { background: rgba(78,161,255,.85); color: #08121f; }
+    .cell.selected { border-color: #ffffff; box-shadow: 0 0 0 2px rgba(78,161,255,.45); }
+    .cell.now { outline: 1px dashed rgba(255,255,255,.55); outline-offset: 1px; }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .legend .sw { width: 22px; height: 12px; border-radius: 3px; }
+
+    .detail {
+      margin-top: 18px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px 20px;
+      min-height: 66px;
+      font-size: 13.5px;
+    }
+    .detail .hint { color: var(--muted); }
+    .detail .title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+    .people { display: flex; flex-wrap: wrap; gap: 8px; }
+    .person {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: #0f1319;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 3px 12px 3px 4px;
+      font-size: 13px;
+    }
+    .avatar {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: linear-gradient(135deg, #4ea1ff, #8a6bff);
+      color: #fff; font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <h1>深夜食堂</h1>
+    <a class="back" href="/">← 回首页</a>
+  </div>
+  <p class="sub">点任意格子，看这个时段谁有空。当前是<strong>假数据</strong>，只为了先看到产品长什么样。</p>
+
+  <div class="chips">
+    <div class="chip">群成员 <b>{{ summary.members }}</b></div>
+    <div class="chip">有人有空的时段 <b>{{ summary.covered_slots }}</b> 个</div>
+    {% if summary.busiest.count %}
+      <div class="chip">最热 <b>{{ summary.busiest.day }} {{ summary.busiest.hour }}:00</b> · {{ summary.busiest.count }} 人</div>
+    {% endif %}
+  </div>
+
+  <div class="board">
+    <div class="grid">
+      <div></div>
+      {% for hour in hours %}
+        <div class="hlabel">{% if hour|divisibleby:3 %}{{ hour|stringformat:"02d" }}{% endif %}</div>
+      {% endfor %}
+
+      {% for row in rows %}
+        <div class="dlabel {% if row.day_index >= 5 %}weekend{% endif %}">{{ row.day }}</div>
+        {% for cell in row.cells %}
+          <div class="cell lv{{ cell.level }}"
+               data-day="{{ row.day }}"
+               data-hour="{{ cell.hour }}"
+               data-count="{{ cell.count }}"
+               data-names="{{ cell.names_text }}"
+               data-day-index="{{ row.day_index }}"
+               title="{% if cell.count %}{{ row.day }} {{ cell.hour }}:00 · {{ cell.count }} 人：{{ cell.names_text }}{% else %}{{ row.day }} {{ cell.hour }}:00 · 没人有空{% endif %}">
+            {% if cell.count %}{{ cell.count }}{% endif %}
+          </div>
+        {% endfor %}
+      {% endfor %}
+    </div>
+
+    <div class="legend">
+      <span>人少</span>
+      <span class="sw" style="background: rgba(255,255,255,.035)"></span>
+      <span class="sw" style="background: rgba(78,161,255,.18)"></span>
+      <span class="sw" style="background: rgba(78,161,255,.36)"></span>
+      <span class="sw" style="background: rgba(78,161,255,.58)"></span>
+      <span class="sw" style="background: rgba(78,161,255,.85)"></span>
+      <span>人多</span>
+      <span style="margin-left:auto">虚线圈 = 现在这个时段</span>
+    </div>
+  </div>
+
+  <div class="detail" id="detail">
+    <span class="hint">点上面任意一个格子。</span>
+  </div>
+</div>
+
+<script>
+  const detail = document.getElementById('detail');
+
+  function render(cell) {
+    const day = cell.dataset.day;
+    const hour = cell.dataset.hour.padStart(2, '0');
+    const count = parseInt(cell.dataset.count, 10);
+    const names = cell.dataset.names;
+
+    if (!count) {
+      detail.innerHTML = '<div class="title">' + day + ' ' + hour + ':00</div>' +
+                         '<span class="hint">这个时段没人有空。</span>';
+      return;
+    }
+
+    const people = names.split('、').map(n =>
+      '<span class="person"><span class="avatar">' + n.slice(0, 1) + '</span>' + n + '</span>'
+    ).join('');
+
+    detail.innerHTML = '<div class="title">' + day + ' ' + hour + ':00 · ' + count + ' 人</div>' +
+                       '<div class="people">' + people + '</div>';
+  }
+
+  document.querySelectorAll('.cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      document.querySelectorAll('.cell.selected').forEach(c => c.classList.remove('selected'));
+      cell.classList.add('selected');
+      render(cell);
+    });
+  });
+
+  // 标出现在这个时段
+  const now = new Date();
+  const jsDay = now.getDay();                 // 0=周日
+  const ourDay = (jsDay + 6) % 7;             // 转成 0=周一
+  const nowCell = document.querySelector(
+    '.cell[data-day-index="' + ourDay + '"][data-hour="' + now.getHours() + '"]'
+  );
+  if (nowCell) nowCell.classList.add('now');
+</script>
+</body>
+</html>

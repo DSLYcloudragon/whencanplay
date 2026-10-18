@@ -63,6 +63,17 @@
       font-size: 13.5px;
       color: var(--muted);
     }
+    .btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #06121f;
+      font-weight: 700;
+      font-size: 14px;
+      text-decoration: none;
+      padding: 11px 20px;
+      border-radius: 9px;
+    }
+    .btn:hover { filter: brightness(1.1); }
     .next b { color: var(--text); font-weight: 600; }
     .next ol { margin: 10px 0 0; padding-left: 20px; }
     .next li { margin: 4px 0; }
@@ -83,19 +94,22 @@
 
     <div class="status">
       <span>●</span>
-      <span>第一步已跑通：Django 骨架 + 路由 + 模板</span>
+      <span>数据模型已建好，群时间热力图可以看了</span>
     </div>
 
+    <p style="margin:22px 0 0">
+      <a class="btn" href="/heatmap/">打开群时间热力图 →</a>
+    </p>
+
     <div class="next">
-      <b>接下来会出现在这个页面上：</b>
+      <b>注意：页面上还是假数据</b>
       <ol>
-        <li>群时间热力图（谁有空、几个人）</li>
-        <li>点开时段后的可玩游戏列表</li>
-        <li>「现在 3 人，最佳 4~6 人，还差 1 人」</li>
+        <li>热力图用的是写死的 6 个虚构成员，只为先看效果</li>
+        <li>下一步把它换成数据库里的真实数据，页面不用改</li>
+        <li>再往后才是「点开时段 → 能玩什么 → 还差几人」</li>
       </ol>
       <p style="margin-top:14px">
-        现在还没到那一步。下一步先建数据模型，后台就在
-        <code>/admin/</code>。
+        后台在 <code>/admin/</code>，10 款种子游戏已经躺在里面了。
       </p>
     </div>
   </main>

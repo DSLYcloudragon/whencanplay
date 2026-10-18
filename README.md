@@ -58,7 +58,7 @@ kahei/
 │   ├── settings.py     全局设置：数据库、语言、时区、装哪些 app
 │   └── urls.py         路由表：哪个网址对应哪个页面
 └── core/               我们自己的功能
-    ├── models.py       数据表定义 ← 第 2 步写这里
+    ├── models.py       数据表定义 ← 第 2 步已完成
     ├── views.py        页面逻辑
     ├── admin.py        后台配置
     └── templates/
@@ -83,7 +83,7 @@ kahei/
 ## 十步计划
 
 - [x] 1. 骨架跑起来（路由 → 视图 → 模板）
-- [ ] 2. 建数据模型：Game / Group / Membership
+- [x] 2. 建数据模型：User / Group / Membership / Availability / Game / OwnedGame
 - [ ] 3. 注册、登录、登出
 - [ ] 4. 建群 + 邀请码入群
 - [ ] 5. 官方游戏库 + 维护者后台

@@ -57,6 +57,10 @@ INSTALLED_APPS = [
     'core',
 ]
 
+# 自定义用户模型。登录账号用邮箱，昵称单独存一个字段。
+# 这一行必须在第一次 migrate 之前定好，之后改就要清库重来。
+AUTH_USER_MODEL = 'core.User'
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

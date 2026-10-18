@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+
+# 密钥与本地配置（绝不提交）
+.env
+.env.*
+!.env.example
+*.pem
+
+# 编辑器
+.vscode/
+.idea/

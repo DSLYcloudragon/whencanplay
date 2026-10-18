@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>开黑协调工具</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --card: #171b22;
+      --line: #262c36;
+      --text: #e6e9ef;
+      --muted: #8b93a1;
+      --accent: #4ea1ff;
+      --ok: #3ddc97;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: radial-gradient(1200px 600px at 50% -10%, #1b2432 0%, var(--bg) 60%);
+      color: var(--text);
+      font-family: -apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+      line-height: 1.6;
+    }
+    .card {
+      width: 100%;
+      max-width: 560px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 36px 32px;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 26px;
+      letter-spacing: .5px;
+    }
+    .tagline {
+      margin: 0 0 26px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(61, 220, 151, .08);
+      border: 1px solid rgba(61, 220, 151, .25);
+      border-radius: 9px;
+      font-size: 13.5px;
+      color: var(--ok);
+    }
+    .next {
+      margin-top: 26px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      font-size: 13.5px;
+      color: var(--muted);
+    }
+    .next b { color: var(--text); font-weight: 600; }
+    .next ol { margin: 10px 0 0; padding-left: 20px; }
+    .next li { margin: 4px 0; }
+    code {
+      background: #0c0f13;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 1px 5px;
+      font-size: 12.5px;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>开黑协调工具</h1>
+    <p class="tagline">让「今晚开黑吗」这句话，30 秒内有答案。</p>
+
+    <div class="status">
+      <span>●</span>
+      <span>第一步已跑通：Django 骨架 + 路由 + 模板</span>
+    </div>
+
+    <div class="next">
+      <b>接下来会出现在这个页面上：</b>
+      <ol>
+        <li>群时间热力图（谁有空、几个人）</li>
+        <li>点开时段后的可玩游戏列表</li>
+        <li>「现在 3 人，最佳 4~6 人，还差 1 人」</li>
+      </ol>
+      <p style="margin-top:14px">
+        现在还没到那一步。下一步先建数据模型，后台就在
+        <code>/admin/</code>。
+      </p>
+    </div>
+  </main>
+</body>
+</html>

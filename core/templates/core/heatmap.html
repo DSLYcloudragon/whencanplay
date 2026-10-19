@@ -167,10 +167,16 @@
     .popup {
       position: absolute; z-index: 50;
       background: #1b2029; border: 1px solid var(--line);
-      border-radius: 10px; padding: 5px; display: flex; gap: 3px;
+      border-radius: 10px; padding: 6px;
+      display: flex; flex-direction: column; gap: 4px;
       box-shadow: 0 12px 34px rgba(0, 0, 0, .55);
     }
     .popup[hidden] { display: none; }
+    .popup .ptitle {
+      font-size: 12px; color: var(--muted); padding: 2px 7px 4px;
+      white-space: nowrap; font-variant-numeric: tabular-nums;
+    }
+    .popup .prow { display: flex; gap: 3px; }
     .popup button {
       background: none; border: 0; color: var(--text); font-size: 13px;
       padding: 7px 13px; border-radius: 7px; cursor: pointer; font-family: inherit;
@@ -278,9 +284,12 @@
 </div>
 
 <div class="popup" id="popup" hidden>
-  <button type="button" data-state="free">有空</button>
-  <button type="button" data-state="busy">没空</button>
-  <button type="button" class="clear" data-state="clear">清除</button>
+  <div class="ptitle" id="ptitle"></div>
+  <div class="prow">
+    <button type="button" data-state="free">有空</button>
+    <button type="button" data-state="busy">没空</button>
+    <button type="button" class="clear" data-state="clear">清除</button>
+  </div>
 </div>
 
 <script>
@@ -295,8 +304,8 @@
   const scopeOnly = document.getElementById('scopeOnly');
   const pstat = document.getElementById('pstat');
 
-  let brush = 'free';        // 拖拽时刷的状态，从弹出菜单里选过就记住
-  let anchor = null;         // {day, hour, cell}
+  let anchor = null;         // 鼠标按下的起点 {day, hour, cell}
+  let pending = null;        // 弹菜单期间待处理的范围 {day, from, to}
   let dragging = false;
 
   function cellAt(day, hour) {
@@ -317,17 +326,29 @@
     }
   }
 
-  function hidePopup() { popup.hidden = true; }
+  function hidePopup() {
+    popup.hidden = true;
+    pending = null;
+  }
 
-  function showPopup(cell) {
-    const rect = cell.getBoundingClientRect();
-    const current = cell.dataset.myState || 'clear';
+  function showPopup(x, y, day, from, to) {
+    pending = { day: day, from: from, to: to };
+
+    const firstCell = cellAt(day, from);
+    const dayName = firstCell ? firstCell.dataset.day : '';
+    const rangeText = String(from).padStart(2, '0') + ':00 – '
+                    + String(to).padStart(2, '0') + ':00';
+    document.getElementById('ptitle').textContent = dayName + ' ' + rangeText;
+
     popup.hidden = false;
-    popup.style.left = (window.scrollX + rect.left) + 'px';
-    popup.style.top = (window.scrollY + rect.bottom + 6) + 'px';
-    popup.querySelectorAll('button').forEach(b => {
-      b.classList.toggle('on', b.dataset.state === current);
-    });
+
+    // 别让菜单跑出屏幕右边
+    const pw = popup.offsetWidth;
+    const maxLeft = window.scrollX + document.documentElement.clientWidth - pw - 8;
+    const left = Math.min(window.scrollX + x, maxLeft);
+
+    popup.style.left = Math.max(window.scrollX + 4, left) + 'px';
+    popup.style.top = (window.scrollY + y + 12) + 'px';
   }
 
   async function apply(day, from, to, state) {
@@ -376,7 +397,6 @@
     anchor = {
       day: parseInt(cell.dataset.dayIndex, 10),
       hour: parseInt(cell.dataset.hour, 10),
-      cell: cell,
     };
     dragging = true;
     highlight(anchor.day, anchor.hour, anchor.hour);
@@ -404,21 +424,24 @@
     highlight(anchor.day, anchor.hour, parseInt(cell.dataset.hour, 10));
   });
 
-  window.addEventListener('mouseup', () => {
+  window.addEventListener('mouseup', (e) => {
     if (!dragging || !anchor) return;
     dragging = false;
 
     const marked = Array.from(grid.querySelectorAll('.cell.dragging'));
     clearDrag();
 
-    if (marked.length <= 1) {
-      // 只点了一下 → 弹菜单让人选状态
-      showPopup(anchor.cell);
-      return;
+    // 选了几格就处理几格；只点一下就是这一小时
+    let from = anchor.hour;
+    let to = anchor.hour + 1;
+    if (marked.length > 1) {
+      const hours = marked.map(c => parseInt(c.dataset.hour, 10));
+      from = Math.min(...hours);
+      to = Math.max(...hours) + 1;
     }
 
-    const hours = marked.map(c => parseInt(c.dataset.hour, 10));
-    apply(anchor.day, Math.min(...hours), Math.max(...hours) + 1, brush);
+    // 选完先别动，弹菜单问要把这一段设成什么
+    showPopup(e.clientX, e.clientY, anchor.day, from, to);
     anchor = null;
   });
 
@@ -426,12 +449,12 @@
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const raw = btn.dataset.state;
-      if (raw !== 'clear') brush = raw;      // 记住这个状态，下次拖拽就用它
       const state = raw === 'clear' ? null : raw;
-      const current = anchor;
+      const target = pending;
       hidePopup();
-      if (current) apply(current.day, current.hour, current.hour + 1, state);
-      anchor = null;
+      if (target) {
+        apply(target.day, target.from, target.to, state);
+      }
     });
   });
 

@@ -32,6 +32,18 @@
 #wcpmenu .dsep { height: 1px; background: #2b323d; margin: 5px 4px; }
 #wcpmenu .dempty { display: block; padding: 7px 10px; color: #8b93a1; font-size: 12.5px; }
 #wcpmenu form { margin: 0; }
+#wcpmenu .grow { display: flex; align-items: center; gap: 2px; }
+#wcpmenu .grow .gname {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 5px;
+}
+#wcpmenu .pin { font-size: 10px; }
+#wcpmenu .pinbtn {
+  background: none; border: 0; cursor: pointer; padding: 6px 8px;
+  color: #5a6472; font-size: 13px; line-height: 1; font-family: inherit;
+  border-radius: 6px;
+}
+#wcpmenu .pinbtn:hover { background: rgba(255, 255, 255, .08); color: #ffd166; }
+#wcpmenu .pinbtn.on { color: #ffd166; }
 </style>
 
 <div id="wcpmenu">
@@ -39,8 +51,20 @@
 
   <div class="dropdown" id="wcpDropdown" hidden>
     <span class="dlabel">我的群</span>
-    {% for g in nav_groups %}
-      <a class="ditem" href="/g/{{ g.code }}/">{{ g.name }}</a>
+    {% for m in nav_memberships %}
+      <div class="grow">
+        <a class="ditem gname" href="/g/{{ m.group.code }}/">
+          {% if m.is_pinned %}<span class="pin">📌</span>{% endif %}{{ m.group.name }}
+        </a>
+        <form method="post" action="{% url 'pin_group' m.group.code %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" class="pinbtn {% if m.is_pinned %}on{% endif %}"
+                  title="{% if m.is_pinned %}取消置顶{% else %}置顶{% endif %}">
+            {% if m.is_pinned %}★{% else %}☆{% endif %}
+          </button>
+        </form>
+      </div>
     {% empty %}
       <span class="dempty">还没加入任何群</span>
     {% endfor %}

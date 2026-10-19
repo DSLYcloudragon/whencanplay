@@ -18,6 +18,7 @@ urlpatterns = [
     # 群
     path('groups/new/', core_views.group_create, name='group_create'),
     path('groups/join/', core_views.group_join, name='group_join'),
+    path('groups/<str:code>/pin/', core_views.pin_group, name='pin_group'),
 
     # 我的时间
     path('me/schedule/', core_views.my_schedule, name='my_schedule'),

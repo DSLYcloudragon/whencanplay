@@ -96,11 +96,17 @@ class Membership(models.Model):
         verbose_name='群',
     )
     role = models.CharField('角色', max_length=10, choices=ROLE_CHOICES, default=ROLE_MEMBER)
+    is_pinned = models.BooleanField(
+        '置顶',
+        default=False,
+        help_text='置顶的群排在菜单最前面，打开网站也优先进入它',
+    )
     joined_at = models.DateTimeField('加入时间', auto_now_add=True)
 
     class Meta:
         verbose_name = '成员关系'
         verbose_name_plural = '成员关系'
+        ordering = ['-is_pinned', 'joined_at']
         constraints = [
             models.UniqueConstraint(fields=['user', 'group'], name='uniq_user_group'),
         ]

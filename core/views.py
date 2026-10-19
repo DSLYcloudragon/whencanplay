@@ -21,6 +21,16 @@ def index(request):
     if not request.user.is_authenticated:
         return render(request, 'core/index.html')
 
+    # 1. 有置顶的群，直接进置顶的（最早的置顶优先）
+    pinned = (Membership.objects
+              .filter(user=request.user, is_pinned=True)
+              .select_related('group')
+              .order_by('joined_at')
+              .first())
+    if pinned:
+        return redirect('group_heatmap', code=pinned.group.code)
+
+    # 2. 没置顶，就回上次看的那个群
     last_code = request.session.get('last_group_code')
     if last_code:
         group = Group.objects.filter(
@@ -29,6 +39,7 @@ def index(request):
         if group:
             return redirect('group_heatmap', code=group.code)
 
+    # 3. 都没有，进第一个群
     first = (Group.objects
              .filter(memberships__user=request.user)
              .order_by('created_at')
@@ -42,8 +53,24 @@ def index(request):
 @login_required
 def account(request):
     """账号菜单：我的群，以及填时间 / 选游戏 / 建群 / 加入群这些入口。"""
-    my_groups = Group.objects.filter(memberships__user=request.user).distinct()
-    return render(request, 'core/account.html', {'my_groups': my_groups})
+    memberships = (Membership.objects
+                   .filter(user=request.user)
+                   .select_related('group')
+                   .order_by('-is_pinned', 'joined_at'))
+    return render(request, 'core/account.html', {'memberships': memberships})
+
+
+@login_required
+@require_POST
+def pin_group(request, code):
+    """给群置顶 / 取消置顶。只认 POST，免得被链接误触。"""
+    membership = get_object_or_404(
+        Membership, user=request.user, group__code=code)
+    membership.is_pinned = not membership.is_pinned
+    membership.save(update_fields=['is_pinned'])
+
+    next_url = _safe_next(request)
+    return redirect(next_url or 'index')
 
 
 def group_heatmap(request, code):

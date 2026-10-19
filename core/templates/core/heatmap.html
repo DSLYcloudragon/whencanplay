@@ -229,6 +229,7 @@
     }
     .cell.mine-free::after { background: #3ddc97; }
     .cell.mine-busy::after { background: #ff6b6b; }
+    .cell.pending { opacity: .55; }
   </style>
 </head>
 <body>
@@ -387,6 +388,13 @@
     pending = null;
   }
 
+  // 请求串起来执行：网络慢的时候连点几下，回来顺序才不会乱
+  let queue = Promise.resolve();
+  function enqueue(task) {
+    queue = queue.then(task).catch(() => {});
+    return queue;
+  }
+
   function showPopup(x, y, day, from, to) {
     pending = { day: day, from: from, to: to };
 
@@ -408,6 +416,16 @@
   }
 
   async function apply(day, from, to, state) {
+    // 先把界面改掉，别让人等网络往返
+    for (let h = from; h < to; h++) {
+      const el = cellAt(day, h);
+      if (!el) continue;
+      el.dataset.myState = state || '';
+      el.classList.remove('mine-free', 'mine-busy');
+      if (state) el.classList.add('mine-' + state);
+      el.classList.add('pending');
+    }
+
     const body = new URLSearchParams({
       weekday: String(day),
       hour_start: String(from),
@@ -416,29 +434,37 @@
       scope: (scopeOnly && scopeOnly.checked) ? 'group' : 'global',
     });
 
-    try {
-      const res = await fetch(MARK_URL, {
-        method: 'POST',
-        headers: {
-          'X-CSRFToken': csrfToken,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: body,
-        credentials: 'same-origin',
-      });
-      const json = await res.json();
-      if (!json.ok) {
-        pstat.textContent = json.error || '保存失败';
-        return;
+    // 请求排队：网络慢的时候连点几下，回来的顺序才不会乱
+    return enqueue(async () => {
+      try {
+        const res = await fetch(MARK_URL, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: body,
+          credentials: 'same-origin',
+        });
+        const json = await res.json();
+        if (!json.ok) {
+          pstat.textContent = json.error || '保存失败';
+          return;
+        }
+        json.cells.forEach(c => {
+          const el = cellAt(day, c.hour);
+          if (el) paintCell(el, c);
+        });
+        pstat.textContent = '';
+      } catch (err) {
+        pstat.textContent = '保存失败，刷新页面确认一下';
+      } finally {
+        for (let h = from; h < to; h++) {
+          const el = cellAt(day, h);
+          if (el) el.classList.remove('pending');
+        }
       }
-      json.cells.forEach(c => {
-        const el = cellAt(day, c.hour);
-        if (el) paintCell(el, c);
-      });
-      pstat.textContent = '';
-    } catch (err) {
-      pstat.textContent = '网络出错，再试一次';
-    }
+    });
   }
 
   grid.addEventListener('mousedown', (e) => {

@@ -1,7 +1,8 @@
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from . import services
 from .forms import AvailabilityForm, GroupCreateForm, JoinGroupForm, RegisterForm
@@ -26,7 +27,7 @@ def group_heatmap(request, code):
     """某个群的周时间热力图。"""
     group = get_object_or_404(Group, code=code)
 
-    rows = services.build_rows(group)
+    rows = services.build_rows_with_mine(group, request.user)
     summary = services.build_summary(group, rows)
     days = [{'index': i, 'name': n} for i, n in enumerate(services.DAY_NAMES)]
 
@@ -41,6 +42,51 @@ def group_heatmap(request, code):
         'summary': summary,
         'is_member': is_member,
     })
+
+
+@login_required
+@require_POST
+def mark_hour(request, code):
+    """在热力图上点一格：把我这个小时的可用状态改掉。
+
+    只在成员之间可用 —— 没入群的人看得见格子，但点不动。
+    """
+    group = get_object_or_404(Group, code=code)
+
+    if not Membership.objects.filter(user=request.user, group=group).exists():
+        return JsonResponse({'ok': False, 'error': '你还没加入这个群'}, status=403)
+
+    try:
+        weekday = int(request.POST['weekday'])
+        hour = int(request.POST['hour'])
+    except (KeyError, ValueError):
+        return JsonResponse({'ok': False, 'error': '参数不对'}, status=400)
+
+    if not (0 <= weekday <= 6 and 0 <= hour <= 23):
+        return JsonResponse({'ok': False, 'error': '参数不对'}, status=400)
+
+    state = request.POST.get('state') or None
+    allowed = (None, Availability.STATE_FREE, Availability.STATE_MAYBE, Availability.STATE_BUSY)
+    if state not in allowed:
+        return JsonResponse({'ok': False, 'error': '状态不对'}, status=400)
+
+    # scope=group 只改这个群；其余情况写人级默认，对所有群生效
+    target_group = group if request.POST.get('scope') == 'group' else None
+    services.set_hour(request.user, target_group, weekday, hour, state)
+
+    rows = services.build_rows_with_mine(group, request.user)
+    cell = rows[hour]['cells'][weekday]
+
+    return JsonResponse({'ok': True, 'cell': {
+        'count': cell['count'],
+        'names_text': cell['names_text'],
+        'level': cell['level'],
+        'my_state': cell['my_state'],
+        'shown': cell['shown'],
+        'extra': cell['extra'],
+        'day': cell['day'],
+        'hour': hour,
+    }})
 
 
 def old_heatmap(request):

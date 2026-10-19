@@ -153,10 +153,39 @@
       background: #0c0f13; border: 1px solid var(--line); border-radius: 5px;
       padding: 1px 6px; color: var(--accent); font-size: 12.5px;
     }
+    .paint {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+      margin-bottom: 14px; font-size: 13px;
+    }
+    .plabel { color: var(--muted); }
+    .modes {
+      display: flex; background: #0f1319; border: 1px solid var(--line);
+      border-radius: 9px; overflow: hidden;
+    }
+    .mode {
+      background: none; border: 0; color: var(--muted);
+      padding: 7px 15px; font-size: 13px; cursor: pointer; font-family: inherit;
+    }
+    .mode.active { background: var(--accent); color: #06121f; font-weight: 700; }
+    .scopetoggle {
+      color: var(--muted); display: flex; align-items: center; gap: 6px; cursor: pointer;
+    }
+    .pstat { color: #ff9b9b; font-size: 12.5px; }
+    .cell { position: relative; }
+    .cell.mine-free::after,
+    .cell.mine-maybe::after,
+    .cell.mine-busy::after {
+      content: ''; position: absolute; top: 3px; right: 3px;
+      width: 5px; height: 5px; border-radius: 50%;
+    }
+    .cell.mine-free::after { background: #3ddc97; }
+    .cell.mine-maybe::after { background: #ffd166; }
+    .cell.mine-busy::after { background: #ff6b6b; }
   </style>
 </head>
 <body>
 <div class="wrap">
+  <div style="display:none">{% csrf_token %}</div>
 
   <div class="topbar">
     <h1>{{ group.name }}</h1>
@@ -178,6 +207,21 @@
     {% endif %}
   </div>
 
+  {% if is_member %}
+    <div class="paint">
+      <span class="plabel">点格子标我的时间</span>
+      <div class="modes" id="modes">
+        <button type="button" class="mode active" data-state="free">有空</button>
+        <button type="button" class="mode" data-state="maybe">可能</button>
+        <button type="button" class="mode" data-state="clear">清除</button>
+      </div>
+      <label class="scopetoggle">
+        <input type="checkbox" id="scopeOnly"> 只改这个群
+      </label>
+      <span class="pstat" id="pstat"></span>
+    </div>
+  {% endif %}
+
   <div class="chips">
     <div class="chip">群成员 <b>{{ summary.members }}</b></div>
     <div class="chip">有人有空的时段 <b>{{ summary.covered_slots }}</b> 个</div>
@@ -196,12 +240,13 @@
       {% for row in rows %}
         <div class="hlabel">{{ row.hour|stringformat:"02d" }}:00</div>
         {% for cell in row.cells %}
-          <div class="cell lv{{ cell.level }}"
+          <div class="cell lv{{ cell.level }}{% if cell.my_state %} mine-{{ cell.my_state }}{% endif %}"
                data-day="{{ cell.day }}"
                data-hour="{{ row.hour }}"
                data-count="{{ cell.count }}"
                data-names="{{ cell.names_text }}"
                data-day-index="{{ cell.day_index }}"
+               data-my-state="{{ cell.my_state|default:'' }}"
                title="{% if cell.count %}{{ cell.day }} {{ row.hour }}:00 · {{ cell.count }} 人：{{ cell.names_text }}{% else %}{{ cell.day }} {{ row.hour }}:00 · 没人有空{% endif %}">
             {% for name in cell.shown %}
               <span class="av">{{ name|slice:":1" }}</span>
@@ -231,6 +276,24 @@
 
 <script>
   const detail = document.getElementById('detail');
+  const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+  const csrfToken = csrfInput ? csrfInput.value : '';
+
+  {% if is_member %}
+  const MARK_URL = "{% url 'mark_hour' group.code %}";
+  const scopeOnly = document.getElementById('scopeOnly');
+  const pstat = document.getElementById('pstat');
+
+  let mode = 'free';
+  const modeButtons = document.querySelectorAll('.mode');
+  modeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      modeButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      mode = btn.dataset.state;
+    });
+  });
+  {% endif %}
 
   function render(cell) {
     const day = cell.dataset.day;
@@ -252,11 +315,75 @@
                        '<div class="people">' + people + '</div>';
   }
 
+  function paintCell(cell, data) {
+    const wasNow = cell.classList.contains('now');
+    const wasSelected = cell.classList.contains('selected');
+
+    cell.dataset.count = data.count;
+    cell.dataset.names = data.names_text;
+    cell.dataset.myState = data.my_state || '';
+    cell.className = 'cell lv' + data.level + (data.my_state ? ' mine-' + data.my_state : '');
+    if (wasNow) cell.classList.add('now');
+    if (wasSelected) cell.classList.add('selected');
+
+    let html = '';
+    (data.shown || []).forEach(n => {
+      html += '<span class="av">' + n.slice(0, 1) + '</span>';
+    });
+    if (data.extra) html += '<span class="more">+' + data.extra + '</span>';
+    cell.innerHTML = html;
+
+    const hh = String(data.hour).padStart(2, '0');
+    cell.title = data.count
+      ? data.day + ' ' + hh + ':00 · ' + data.count + ' 人：' + data.names_text
+      : data.day + ' ' + hh + ':00 · 没人有空';
+  }
+
   document.querySelectorAll('.cell').forEach(cell => {
-    cell.addEventListener('click', () => {
+    cell.addEventListener('click', async () => {
       document.querySelectorAll('.cell.selected').forEach(c => c.classList.remove('selected'));
       cell.classList.add('selected');
       render(cell);
+
+      {% if is_member %}
+      const current = cell.dataset.myState || '';
+      let target;
+      if (mode === 'clear') {
+        target = '';
+      } else {
+        // 再点一次同样的状态 = 取消
+        target = (current === mode) ? '' : mode;
+      }
+
+      const body = new URLSearchParams({
+        weekday: cell.dataset.dayIndex,
+        hour: cell.dataset.hour,
+        state: target,
+        scope: (scopeOnly && scopeOnly.checked) ? 'group' : 'global',
+      });
+
+      try {
+        const res = await fetch(MARK_URL, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: body,
+          credentials: 'same-origin',
+        });
+        const json = await res.json();
+        if (!json.ok) {
+          pstat.textContent = json.error || '保存失败';
+          return;
+        }
+        paintCell(cell, json.cell);
+        render(cell);
+        pstat.textContent = '';
+      } catch (err) {
+        pstat.textContent = '网络出错，再点一次试试';
+      }
+      {% endif %}
     });
   });
 

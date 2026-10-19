@@ -9,7 +9,7 @@ from django.views.decorators.http import require_POST
 
 from . import services
 from .forms import AvailabilityForm, GroupCreateForm, JoinGroupForm, RegisterForm
-from .models import Availability, Group, Membership
+from .models import Availability, Game, Group, Membership, OwnedGame
 
 
 def index(request):
@@ -253,3 +253,70 @@ def delete_range(request, pk):
     if next_url:
         url += '?next=' + quote(next_url)
     return redirect(url)
+
+
+@login_required
+def my_games(request):
+    """我的游戏库：勾出自己拥有的，再挑几款常玩的。
+
+    提交时做「全量同步」：表里以表单为准，多退少补。
+    这比一个个增删接口简单，也不会因为页面没刷新而出现脏数据。
+    """
+    games = list(Game.objects.all())
+    next_url = _safe_next(request)
+
+    if request.method == 'POST':
+        owned_ids = set()
+        for raw in request.POST.getlist('owned'):
+            try:
+                owned_ids.add(int(raw))
+            except ValueError:
+                pass
+
+        fav_ids = set()
+        for raw in request.POST.getlist('favorite'):
+            try:
+                fav_ids.add(int(raw))
+            except ValueError:
+                pass
+
+        valid_ids = {g.pk for g in games}
+        owned_ids &= valid_ids
+        fav_ids &= owned_ids            # 常玩必然是拥有
+
+        # 取消勾选的直接删
+        OwnedGame.objects.filter(user=request.user).exclude(game_id__in=owned_ids).delete()
+
+        for game_id in owned_ids:
+            row, _ = OwnedGame.objects.get_or_create(
+                user=request.user, game_id=game_id)
+            want_fav = game_id in fav_ids
+            if row.is_favorite != want_fav:
+                row.is_favorite = want_fav
+                row.save(update_fields=['is_favorite'])
+
+        url = reverse('my_games')
+        if next_url:
+            url += '?next=' + quote(next_url)
+        return redirect(url)
+
+    owned = {
+        row.game_id: row.is_favorite
+        for row in OwnedGame.objects.filter(user=request.user)
+    }
+
+    items = [
+        {
+            'game': game,
+            'owned': game.pk in owned,
+            'favorite': owned.get(game.pk, False),
+        }
+        for game in games
+    ]
+
+    return render(request, 'core/games.html', {
+        'items': items,
+        'owned_count': len(owned),
+        'favorite_count': sum(1 for is_fav in owned.values() if is_fav),
+        'next_url': next_url,
+    })

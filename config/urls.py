@@ -21,6 +21,9 @@ urlpatterns = [
     path('me/schedule/', core_views.my_schedule, name='my_schedule'),
     path('me/schedule/<int:pk>/delete/', core_views.delete_range, name='delete_range'),
 
+    # 我的游戏
+    path('me/games/', core_views.my_games, name='my_games'),
+
     # 账号
     path('register/', core_views.register, name='register'),
     path('login/', auth_views.LoginView.as_view(), name='login'),

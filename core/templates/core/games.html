@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>我的游戏 · WhenCanPlay</title>
+  <style>
+    :root {
+      --bg: #0d0f13; --panel: #151920; --line: #232932;
+      --text: #e6e9ef; --muted: #8b93a1; --accent: #4ea1ff; --star: #ffd166;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 32px 24px 64px;
+      background: radial-gradient(1400px 700px at 50% -15%, #17202c 0%, var(--bg) 62%);
+      color: var(--text);
+      font-family: -apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+      font-size: 14px; line-height: 1.6;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; }
+
+    .topbar { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+    h1 { margin: 0; font-size: 22px; }
+    .topright { margin-left: auto; display: flex; align-items: center; gap: 14px; font-size: 13px; }
+    .topright a { color: var(--muted); text-decoration: none; }
+    .topright a:hover { color: var(--accent); }
+    .topright .who { color: var(--text); }
+    .logoutform { margin: 0; display: inline; }
+    .logoutbtn {
+      background: none; border: 0; padding: 0; cursor: pointer;
+      color: var(--muted); font-size: 13px; font-family: inherit;
+    }
+    .logoutbtn:hover { color: var(--accent); }
+    .sub { margin: 0 0 22px; color: var(--muted); font-size: 13px; }
+
+    .card {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 12px; padding: 16px 18px;
+    }
+    .toolbar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+      padding-bottom: 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px;
+    }
+    #filter {
+      background: #0f1319; border: 1px solid var(--line); border-radius: 8px;
+      color: var(--text); padding: 8px 12px; font-size: 13.5px; font-family: inherit;
+      width: 220px;
+    }
+    #filter:focus { outline: none; border-color: var(--accent); }
+    .count { color: var(--muted); font-size: 13px; margin-left: auto; }
+    .count b { color: var(--text); }
+
+    .g {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 2px; border-bottom: 1px solid var(--line);
+    }
+    .g:last-child { border-bottom: 0; }
+    .own { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; min-width: 0; }
+    .own input, .fav input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+    .gname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .range { color: var(--muted); font-size: 12.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .fav {
+      display: flex; align-items: center; gap: 6px;
+      color: var(--muted); font-size: 12.5px; cursor: pointer; white-space: nowrap;
+      width: 74px; justify-content: flex-end;
+    }
+    .fav input { accent-color: var(--star); }
+    .fav input:disabled, .fav input:disabled + span { opacity: .32; cursor: default; }
+    .fav.on { color: var(--star); }
+
+    .actions { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+    button.primary {
+      background: var(--accent); color: #06121f; border: 0; border-radius: 9px;
+      padding: 10px 22px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+    }
+    button.primary:hover { filter: brightness(1.1); }
+    .hint { color: var(--muted); font-size: 12.5px; }
+    .empty { color: var(--muted); padding: 14px 0; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <h1>我的游戏</h1>
+    <div class="topright">
+      {% include "core/_nav.html" %}
+      {% if next_url %}<a href="{{ next_url }}">← 返回群页面</a>{% endif %}
+      <a href="{% url 'my_schedule' %}">我的时间</a>
+      <a href="/">← 回首页</a>
+    </div>
+  </div>
+  <p class="sub">
+    勾出你拥有的游戏 —— 这是「这个时段能玩什么」的计算依据。
+    「常玩」是可选的，只用来把结果排序，不勾也能被匹配到。
+  </p>
+
+  <form method="post" id="gamesform">
+    {% csrf_token %}
+
+    <div class="card">
+      <div class="toolbar">
+        <input id="filter" type="text" placeholder="搜索游戏…" autocomplete="off">
+        <span class="count">
+          已勾 <b id="ownedCount">0</b> 款 · 常玩 <b id="favCount">0</b> 款
+        </span>
+      </div>
+
+      {% for it in items %}
+        <div class="g" data-name="{{ it.game.name }}">
+          <label class="own">
+            <input type="checkbox" class="ownbox" name="owned" value="{{ it.game.pk }}" {% if it.owned %}checked{% endif %}>
+            <span class="gname">{{ it.game.name }}</span>
+          </label>
+          <span class="range">最佳 {{ it.game.best_players }} 人 · {{ it.game.min_players }}–{{ it.game.max_players }}</span>
+          <label class="fav {% if it.favorite %}on{% endif %}">
+            <input type="checkbox" name="favorite" value="{{ it.game.pk }}" {% if it.favorite %}checked{% endif %}>
+            <span>常玩</span>
+          </label>
+        </div>
+      {% empty %}
+        <p class="empty">游戏库里还没有游戏。去 <a href="/admin/core/game/add/" style="color:var(--accent)">后台</a> 加几款。</p>
+      {% endfor %}
+    </div>
+
+    <div class="actions">
+      <button class="primary" type="submit">保存</button>
+      <span class="hint">勾了「常玩」但没勾「拥有」的，会被忽略。</span>
+    </div>
+  </form>
+
+</div>
+
+<script>
+  const rows = Array.from(document.querySelectorAll('.g'));
+
+  function refresh() {
+    let owned = 0, fav = 0;
+    rows.forEach(row => {
+      const own = row.querySelector('.ownbox');
+      const favBox = row.querySelector('.fav input');
+      const favLabel = row.querySelector('.fav');
+
+      if (!own.checked) {
+        favBox.checked = false;
+        favBox.disabled = true;
+      } else {
+        favBox.disabled = false;
+      }
+
+      favLabel.classList.toggle('on', favBox.checked && !favBox.disabled);
+
+      if (own.checked) owned += 1;
+      if (favBox.checked && !favBox.disabled) fav += 1;
+    });
+    document.getElementById('ownedCount').textContent = owned;
+    document.getElementById('favCount').textContent = fav;
+  }
+
+  rows.forEach(row => {
+    row.querySelector('.ownbox').addEventListener('change', refresh);
+    row.querySelector('.fav input').addEventListener('change', refresh);
+  });
+
+  refresh();
+
+  // 搜游戏：只是把不匹配的藏起来，不影响勾选
+  document.getElementById('filter').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    rows.forEach(row => {
+      const name = (row.dataset.name || '').toLowerCase();
+      row.style.display = !q || name.includes(q) ? '' : 'none';
+    });
+  });
+</script>
+</body>
+</html>

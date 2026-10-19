@@ -149,6 +149,11 @@
       padding: 9px 16px; border-radius: 9px;
     }
     .actbtn:hover { filter: brightness(1.1); }
+    .actbtn.ghost {
+      background: none; border: 1px solid var(--line); color: var(--text);
+      font-weight: 600;
+    }
+    .actbtn.ghost:hover { border-color: var(--accent); color: var(--accent); filter: none; }
     .invitehint { color: var(--muted); font-size: 12.5px; }
     .invitehint code {
       background: #0c0f13; border: 1px solid var(--line); border-radius: 5px;
@@ -213,6 +218,7 @@
   <div class="actions">
     {% if is_member %}
       <a class="actbtn" href="{% url 'my_schedule' %}?next=/g/{{ group.code }}/">✎ 填我的时间</a>
+      <a class="actbtn ghost" href="{% url 'my_games' %}?next=/g/{{ group.code }}/">我的游戏</a>
       <span class="invitehint">邀请码 <code>{{ group.invite_code }}</code> —— 发给朋友，让他在首页「加入群」里输入</span>
     {% elif user.is_authenticated %}
       <a class="actbtn" href="{% url 'group_join' %}">输入邀请码加入这个群</a>

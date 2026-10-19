@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}账号{% endblock %} · WhenCanPlay</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --card: #171b22;
+      --line: #262c36;
+      --text: #e6e9ef;
+      --muted: #8b93a1;
+      --accent: #4ea1ff;
+      --danger: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: radial-gradient(1200px 600px at 50% -10%, #1b2432 0%, var(--bg) 60%);
+      color: var(--text);
+      font-family: -apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+    .card {
+      width: 100%;
+      max-width: 400px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 32px 28px;
+    }
+    h1 { margin: 0 0 6px; font-size: 22px; }
+    .sub { margin: 0 0 22px; color: var(--muted); font-size: 13px; }
+    .sub a { color: var(--accent); text-decoration: none; }
+    .field { margin-bottom: 14px; }
+    label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 5px; }
+    input[type=text], input[type=email], input[type=password] {
+      width: 100%;
+      padding: 10px 12px;
+      background: #0f1319;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+    }
+    input:focus { outline: none; border-color: var(--accent); }
+    .err { color: var(--danger); font-size: 12.5px; margin-top: 4px; }
+    .err ul { margin: 4px 0 0; padding-left: 18px; }
+    .help { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .alert {
+      background: rgba(255,107,107,.1);
+      border: 1px solid rgba(255,107,107,.35);
+      color: var(--danger);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    button {
+      width: 100%;
+      margin-top: 8px;
+      padding: 11px;
+      background: var(--accent);
+      color: #06121f;
+      border: 0;
+      border-radius: 9px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    button:hover { filter: brightness(1.1); }
+    .foot { margin-top: 18px; font-size: 13px; color: var(--muted); }
+    .foot a { color: var(--muted); text-decoration: none; }
+    .foot a:hover { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main class="card">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -74,6 +74,19 @@
       border-radius: 9px;
     }
     .btn:hover { filter: brightness(1.1); }
+    .authbar {
+      margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line);
+      display: flex; align-items: center; gap: 14px; font-size: 13px;
+    }
+    .authbar a { color: var(--accent); text-decoration: none; }
+    .authbar a:hover { text-decoration: underline; }
+    .authbar .who { color: var(--text); }
+    .logoutform { margin: 0; display: inline; }
+    .logoutbtn {
+      background: none; border: 0; padding: 0; cursor: pointer;
+      color: var(--muted); font-size: 13px; font-family: inherit;
+    }
+    .logoutbtn:hover { color: var(--accent); }
     .next b { color: var(--text); font-weight: 600; }
     .next ol { margin: 10px 0 0; padding-left: 20px; }
     .next li { margin: 4px 0; }
@@ -112,13 +125,17 @@
     <div class="next">
       <b>这一步改动的东西</b>
       <ol>
-        <li>热力图不再读 <code>mock.py</code> 里的写死数据，改成查 <code>Availability</code> 表</li>
-        <li>每个群有了自己的地址：<code>/g/群标识/</code></li>
-        <li>覆盖优先级生效了：群级的「没空」能压过你人级的「有空」</li>
+        <li>可以注册、登录、退出了（邮箱当登录名，不发验证邮件）</li>
+        <li>热力图查的是 <code>Availability</code> 表，不再是写死的数据</li>
+        <li>每个群有自己的地址：<code>/g/群标识/</code></li>
       </ol>
       <p style="margin-top:14px">
         后台在 <code>/admin/</code>，可以在那里直接加空闲时段，刷新就变。
       </p>
+    </div>
+
+    <div class="authbar">
+      {% include "core/_nav.html" %}
     </div>
   </main>
 </body>

@@ -1,0 +1,10 @@
+{% if user.is_authenticated %}
+  <span class="who">{{ user.nickname|default:user.username }}</span>
+  <form method="post" action="{% url 'logout' %}" class="logoutform">
+    {% csrf_token %}
+    <button type="submit" class="logoutbtn">退出</button>
+  </form>
+{% else %}
+  <a href="{% url 'login' %}">登录</a>
+  <a href="{% url 'register' %}">注册</a>
+{% endif %}

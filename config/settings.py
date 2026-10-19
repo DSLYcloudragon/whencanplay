@@ -70,6 +70,11 @@ INSTALLED_APPS = [
 # 这一行必须在第一次 migrate 之前定好，之后改就要清库重来。
 AUTH_USER_MODEL = 'core.User'
 
+# 登录、登出之后往哪跳
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'index'
+LOGOUT_REDIRECT_URL = 'index'
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

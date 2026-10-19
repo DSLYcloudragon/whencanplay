@@ -45,6 +45,24 @@ python -c "from django.core.management.utils import get_random_secret_key as g; 
 
 把上面命令输出的那一行写进 `.env` 即可。
 
+### 造点数据再看
+
+```powershell
+python manage.py seed_demo        # 演示群「深夜食堂」+ 6 个成员 + 空闲时段
+python manage.py seed_test_users  # 3 个能登录的测试账号
+```
+
+测试账号统一密码 `TestPass2026`：
+
+| 邮箱 | 昵称 |
+|---|---|
+| `test1@example.com` | 测试一号 |
+| `test2@example.com` | 测试二号 |
+| `test3@example.com` | 测试三号 |
+
+> `seed_demo` 造的 `demo_*` 账号是纯数据账号，**没有密码、登不进去**，
+> 只用来把热力图撑起来。
+
 ---
 
 ## 目录说明
@@ -60,15 +78,22 @@ kahei/
 └── core/               我们自己的功能
     ├── models.py       数据表定义（6 张表）
     ├── services.py     计算核心：把区间叠起来、算成热力图
+    ├── forms.py        注册表单
     ├── views.py        页面逻辑
     ├── admin.py        后台配置
     ├── management/
     │   └── commands/
-    │       └── seed_demo.py   造演示数据的命令
+    │       ├── seed_demo.py        造演示群和空闲时段
+    │       └── seed_test_users.py  造测试账号
     └── templates/
-        └── core/
-            ├── index.html     首页
-            └── heatmap.html   群时间热力图
+        ├── core/
+        │   ├── index.html      首页
+        │   ├── heatmap.html    群时间热力图
+        │   ├── register.html   注册
+        │   ├── auth_base.html  登录/注册共用的外壳
+        │   └── _nav.html       右上角的登录状态
+        └── registration/
+            └── login.html      登录（Django 内置视图要求这个路径）
 ```
 
 ---
@@ -91,7 +116,7 @@ kahei/
 - [x] 2. 建数据模型：User / Group / Membership / Availability / Game / OwnedGame
 - [x] 3. **群时间热力图（假数据）** ← 提前做了，先看见产品
 - [x] 4. 热力图接真实数据（查 `Availability` 表 + 覆盖优先级 + 跨午夜）
-- [ ] 5. 注册、登录、登出
+- [x] 5. 注册、登录、登出
 - [ ] 6. 建群 + 邀请码入群
 - [ ] 7. 填空闲时间（区间输入）
 - [ ] 8. 勾选拥有的游戏

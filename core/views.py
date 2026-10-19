@@ -1,7 +1,9 @@
+from django.contrib.auth import login as auth_login
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from . import services
+from .forms import RegisterForm
 from .models import Group
 
 
@@ -36,3 +38,24 @@ def old_heatmap(request):
     if group is None:
         raise Http404('还没有任何群，先跑：python manage.py seed_demo')
     return redirect('group_heatmap', code=group.code)
+
+
+def register(request):
+    """注册。
+
+    没有「验证邮箱」这一步：邮箱只是登录用的账号名。
+    注册成功后直接登录，不让用户再输一遍密码。
+    """
+    if request.user.is_authenticated:
+        return redirect('index')
+
+    if request.method == 'POST':
+        form = RegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            auth_login(request, user)
+            return redirect('index')
+    else:
+        form = RegisterForm()
+
+    return render(request, 'core/register.html', {'form': form})

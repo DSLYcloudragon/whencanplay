@@ -131,6 +131,16 @@
       color: #fff; font-size: 11px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
     }
+    .topright { margin-left: auto; display: flex; align-items: center; gap: 14px; font-size: 13px; }
+    .topright a { color: var(--muted); text-decoration: none; }
+    .topright a:hover { color: var(--accent); }
+    .topright .who { color: var(--text); }
+    .logoutform { margin: 0; display: inline; }
+    .logoutbtn {
+      background: none; border: 0; padding: 0; cursor: pointer;
+      color: var(--muted); font-size: 13px; font-family: inherit;
+    }
+    .logoutbtn:hover { color: var(--accent); }
   </style>
 </head>
 <body>
@@ -138,7 +148,10 @@
 
   <div class="topbar">
     <h1>{{ group.name }}</h1>
-    <a class="back" href="/">← 回首页</a>
+    <div class="topright">
+      {% include "core/_nav.html" %}
+      <a class="back" href="/">← 回首页</a>
+    </div>
   </div>
   <p class="sub">点任意格子，看这个时段谁有空。数据来自成员自己填的空闲时段，本周是 {{ summary.week_key }}。</p>
 

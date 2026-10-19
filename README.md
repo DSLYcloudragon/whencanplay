@@ -59,9 +59,12 @@ kahei/
 │   └── urls.py         路由表：哪个网址对应哪个页面
 └── core/               我们自己的功能
     ├── models.py       数据表定义（6 张表）
+    ├── services.py     计算核心：把区间叠起来、算成热力图
     ├── views.py        页面逻辑
     ├── admin.py        后台配置
-    ├── mock.py         假数据（热力图用，第 4 步会换掉）
+    ├── management/
+    │   └── commands/
+    │       └── seed_demo.py   造演示数据的命令
     └── templates/
         └── core/
             ├── index.html     首页
@@ -87,7 +90,7 @@ kahei/
 - [x] 1. 骨架跑起来（路由 → 视图 → 模板）
 - [x] 2. 建数据模型：User / Group / Membership / Availability / Game / OwnedGame
 - [x] 3. **群时间热力图（假数据）** ← 提前做了，先看见产品
-- [ ] 4. 热力图接真实数据（把 `core/mock.py` 换成数据库查询）
+- [x] 4. 热力图接真实数据（查 `Availability` 表 + 覆盖优先级 + 跨午夜）
 - [ ] 5. 注册、登录、登出
 - [ ] 6. 建群 + 邀请码入群
 - [ ] 7. 填空闲时间（区间输入）

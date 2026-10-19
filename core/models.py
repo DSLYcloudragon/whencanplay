@@ -104,9 +104,11 @@ class Availability(models.Model):
 
     STATE_FREE = 'free'
     STATE_MAYBE = 'maybe'
+    STATE_BUSY = 'busy'
     STATE_CHOICES = [
         (STATE_FREE, '有空'),
         (STATE_MAYBE, '可能'),
+        (STATE_BUSY, '没空'),
     ]
 
     user = models.ForeignKey(

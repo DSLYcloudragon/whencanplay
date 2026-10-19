@@ -137,10 +137,10 @@
 <div class="wrap">
 
   <div class="topbar">
-    <h1>深夜食堂</h1>
+    <h1>{{ group.name }}</h1>
     <a class="back" href="/">← 回首页</a>
   </div>
-  <p class="sub">点任意格子，看这个时段谁有空。当前是<strong>假数据</strong>，只为了先看到产品长什么样。</p>
+  <p class="sub">点任意格子，看这个时段谁有空。数据来自成员自己填的空闲时段，本周是 {{ summary.week_key }}。</p>
 
   <div class="chips">
     <div class="chip">群成员 <b>{{ summary.members }}</b></div>

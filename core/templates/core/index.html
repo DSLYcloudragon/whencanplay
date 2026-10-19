@@ -94,22 +94,30 @@
 
     <div class="status">
       <span>●</span>
-      <span>数据模型已建好，群时间热力图可以看了</span>
+      <span>热力图已经接上真实数据了</span>
     </div>
 
-    <p style="margin:22px 0 0">
-      <a class="btn" href="/heatmap/">打开群时间热力图 →</a>
-    </p>
+    <div style="margin:22px 0 0; display:flex; flex-wrap:wrap; gap:10px">
+      {% for g in groups %}
+        <a class="btn" href="/g/{{ g.code }}/">{{ g.name }} →</a>
+      {% empty %}
+        <p class="next" style="margin:0">
+          还没有任何群。在命令行跑一遍
+          <code>python manage.py seed_demo</code>
+          造一个演示群。
+        </p>
+      {% endfor %}
+    </div>
 
     <div class="next">
-      <b>注意：页面上还是假数据</b>
+      <b>这一步改动的东西</b>
       <ol>
-        <li>热力图用的是写死的 6 个虚构成员，只为先看效果</li>
-        <li>下一步把它换成数据库里的真实数据，页面不用改</li>
-        <li>再往后才是「点开时段 → 能玩什么 → 还差几人」</li>
+        <li>热力图不再读 <code>mock.py</code> 里的写死数据，改成查 <code>Availability</code> 表</li>
+        <li>每个群有了自己的地址：<code>/g/群标识/</code></li>
+        <li>覆盖优先级生效了：群级的「没空」能压过你人级的「有空」</li>
       </ol>
       <p style="margin-top:14px">
-        后台在 <code>/admin/</code>，10 款种子游戏已经躺在里面了。
+        后台在 <code>/admin/</code>，可以在那里直接加空闲时段，刷新就变。
       </p>
     </div>
   </main>

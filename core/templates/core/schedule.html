@@ -146,7 +146,7 @@
             <span class="dayname">{{ day.name }}</span>
             <span class="range">{{ r.start|time:"H:i" }} – {{ r.end|time:"H:i" }}</span>
             {% if r.end < r.start %}<span class="cross">跨到次日</span>{% endif %}
-            <span class="tag {% if r.state == 'maybe' %}maybe{% elif r.state == 'busy' %}busy{% endif %}">
+            <span class="tag {% if r.state == 'busy' %}busy{% endif %}">
               {{ r.get_state_display }}
             </span>
             <form method="post" action="{% url 'delete_range' r.pk %}">

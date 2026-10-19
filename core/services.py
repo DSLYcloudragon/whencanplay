@@ -63,7 +63,7 @@ def interval_hours(weekday, start, end):
 
 
 def member_states(group, user_id, week_key):
-    """某个成员这一周每一格的状态。返回 {(星期, 小时): 'free' / 'maybe'}。"""
+    """某个成员这一周每一格的状态。返回 {(星期, 小时): 'free' / 'busy'}。"""
     entries = Availability.objects.filter(user_id=user_id).filter(
         Q(group__isnull=True) | Q(group=group)
     ).filter(
@@ -89,14 +89,17 @@ def _group_members(group):
 
 
 def build_grid(group, week_key=None):
-    """{ (星期, 小时): [昵称, ...] }，只统计有空和可能的人。"""
+    """{ (星期, 小时): [昵称, ...] }，只统计「有空」的人。
+
+    「没空」是主动声明的不方便，和「没填过」在展示上一样，都不算可用人力。
+    """
     week_key = week_key or current_week_key()
     grid = defaultdict(list)
 
     for user_id, name in _group_members(group):
         states = member_states(group, user_id, week_key)
         for cell, state in states.items():
-            if state in (Availability.STATE_FREE, Availability.STATE_MAYBE):
+            if state == Availability.STATE_FREE:
                 grid[cell].append(name)
 
     return grid
@@ -239,14 +242,19 @@ def _split_by_day(segments):
     return result
 
 
-def set_hour(user, group, weekday, hour, state):
-    """把「我」在某个小时的可用状态设成 state。
+def set_span(user, group, weekday, start_hour, end_hour, state):
+    """把「我」在某个星期、某几个小时的状态统一设成 state。
+
+    start_hour 和 end_hour 是左闭右开的小时区间，比如 20 到 23 表示 20:00–23:00。
+    一次点一格时传成同一个值（20, 21）；拖拽一段时传 (20, 23)。
 
     state 传 None 表示清除。group 传 None 表示写人级默认（对所有群生效）。
-    返回写入之后这个小时的状态。
     """
-    begin = weekday * 1440 + hour * 60
-    end = begin + 60
+    if end_hour <= start_hour:
+        end_hour = start_hour + 1
+
+    begin = weekday * 1440 + start_hour * 60
+    end = weekday * 1440 + end_hour * 60
 
     entries = Availability.objects.filter(user=user, group=group, week_key='')
     segments = [_entry_to_abs(e) for e in entries]

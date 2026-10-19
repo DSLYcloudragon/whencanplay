@@ -48,6 +48,7 @@
       display: grid;
       grid-template-columns: 52px repeat(7, minmax(0, 1fr));
       gap: 3px;
+      user-select: none;
     }
     .corner { }
     .dhead {
@@ -158,28 +159,35 @@
       margin-bottom: 14px; font-size: 13px;
     }
     .plabel { color: var(--muted); }
-    .modes {
-      display: flex; background: #0f1319; border: 1px solid var(--line);
-      border-radius: 9px; overflow: hidden;
-    }
-    .mode {
-      background: none; border: 0; color: var(--muted);
-      padding: 7px 15px; font-size: 13px; cursor: pointer; font-family: inherit;
-    }
-    .mode.active { background: var(--accent); color: #06121f; font-weight: 700; }
     .scopetoggle {
       color: var(--muted); display: flex; align-items: center; gap: 6px; cursor: pointer;
     }
     .pstat { color: #ff9b9b; font-size: 12.5px; }
+
+    .popup {
+      position: absolute; z-index: 50;
+      background: #1b2029; border: 1px solid var(--line);
+      border-radius: 10px; padding: 5px; display: flex; gap: 3px;
+      box-shadow: 0 12px 34px rgba(0, 0, 0, .55);
+    }
+    .popup[hidden] { display: none; }
+    .popup button {
+      background: none; border: 0; color: var(--text); font-size: 13px;
+      padding: 7px 13px; border-radius: 7px; cursor: pointer; font-family: inherit;
+      white-space: nowrap;
+    }
+    .popup button:hover { background: rgba(255, 255, 255, .09); }
+    .popup button.on { background: var(--accent); color: #06121f; font-weight: 700; }
+    .popup button.clear { color: #ff9b9b; }
+
     .cell { position: relative; }
+    .cell.dragging { box-shadow: inset 0 0 0 2px var(--accent); }
     .cell.mine-free::after,
-    .cell.mine-maybe::after,
     .cell.mine-busy::after {
       content: ''; position: absolute; top: 3px; right: 3px;
       width: 5px; height: 5px; border-radius: 50%;
     }
     .cell.mine-free::after { background: #3ddc97; }
-    .cell.mine-maybe::after { background: #ffd166; }
     .cell.mine-busy::after { background: #ff6b6b; }
   </style>
 </head>
@@ -209,12 +217,7 @@
 
   {% if is_member %}
     <div class="paint">
-      <span class="plabel">点格子标我的时间</span>
-      <div class="modes" id="modes">
-        <button type="button" class="mode active" data-state="free">有空</button>
-        <button type="button" class="mode" data-state="maybe">可能</button>
-        <button type="button" class="mode" data-state="clear">清除</button>
-      </div>
+      <span class="plabel">点一格选状态，或者按住左键拖一段</span>
       <label class="scopetoggle">
         <input type="checkbox" id="scopeOnly"> 只改这个群
       </label>
@@ -231,7 +234,7 @@
   </div>
 
   <div class="board">
-    <div class="grid">
+    <div class="grid" id="grid">
       <div class="corner"></div>
       {% for day in days %}
         <div class="dhead {% if day.index >= 5 %}weekend{% endif %}">{{ day.name }}</div>
@@ -274,6 +277,12 @@
   </div>
 </div>
 
+<div class="popup" id="popup" hidden>
+  <button type="button" data-state="free">有空</button>
+  <button type="button" data-state="busy">没空</button>
+  <button type="button" class="clear" data-state="clear">清除</button>
+</div>
+
 <script>
   const detail = document.getElementById('detail');
   const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -281,17 +290,141 @@
 
   {% if is_member %}
   const MARK_URL = "{% url 'mark_hour' group.code %}";
+  const grid = document.getElementById('grid');
+  const popup = document.getElementById('popup');
   const scopeOnly = document.getElementById('scopeOnly');
   const pstat = document.getElementById('pstat');
 
-  let mode = 'free';
-  const modeButtons = document.querySelectorAll('.mode');
-  modeButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      modeButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      mode = btn.dataset.state;
+  let brush = 'free';        // 拖拽时刷的状态，从弹出菜单里选过就记住
+  let anchor = null;         // {day, hour, cell}
+  let dragging = false;
+
+  function cellAt(day, hour) {
+    return grid.querySelector('.cell[data-day-index="' + day + '"][data-hour="' + hour + '"]');
+  }
+
+  function clearDrag() {
+    grid.querySelectorAll('.cell.dragging').forEach(c => c.classList.remove('dragging'));
+  }
+
+  function highlight(day, a, b) {
+    clearDrag();
+    const from = Math.min(a, b);
+    const to = Math.max(a, b);
+    for (let h = from; h <= to; h++) {
+      const c = cellAt(day, h);
+      if (c) c.classList.add('dragging');
+    }
+  }
+
+  function hidePopup() { popup.hidden = true; }
+
+  function showPopup(cell) {
+    const rect = cell.getBoundingClientRect();
+    const current = cell.dataset.myState || 'clear';
+    popup.hidden = false;
+    popup.style.left = (window.scrollX + rect.left) + 'px';
+    popup.style.top = (window.scrollY + rect.bottom + 6) + 'px';
+    popup.querySelectorAll('button').forEach(b => {
+      b.classList.toggle('on', b.dataset.state === current);
     });
+  }
+
+  async function apply(day, from, to, state) {
+    const body = new URLSearchParams({
+      weekday: String(day),
+      hour_start: String(from),
+      hour_end: String(to),
+      state: state || '',
+      scope: (scopeOnly && scopeOnly.checked) ? 'group' : 'global',
+    });
+
+    try {
+      const res = await fetch(MARK_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrfToken,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body,
+        credentials: 'same-origin',
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        pstat.textContent = json.error || '保存失败';
+        return;
+      }
+      json.cells.forEach(c => {
+        const el = cellAt(day, c.hour);
+        if (el) paintCell(el, c);
+      });
+      pstat.textContent = '';
+    } catch (err) {
+      pstat.textContent = '网络出错，再试一次';
+    }
+  }
+
+  grid.addEventListener('mousedown', (e) => {
+    const cell = e.target.closest('.cell');
+    if (!cell) return;
+    e.preventDefault();
+    hidePopup();
+
+    anchor = {
+      day: parseInt(cell.dataset.dayIndex, 10),
+      hour: parseInt(cell.dataset.hour, 10),
+      cell: cell,
+    };
+    dragging = true;
+    highlight(anchor.day, anchor.hour, anchor.hour);
+
+    document.querySelectorAll('.cell.selected').forEach(c => c.classList.remove('selected'));
+    cell.classList.add('selected');
+    render(cell);
+  });
+
+  grid.addEventListener('mousemove', (e) => {
+    if (!dragging || !anchor) return;
+    const cell = e.target.closest('.cell');
+    if (!cell) return;
+    // 只在自己按下那一列里拖，避免手一抖刷出一大片
+    if (parseInt(cell.dataset.dayIndex, 10) !== anchor.day) return;
+    highlight(anchor.day, anchor.hour, parseInt(cell.dataset.hour, 10));
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!dragging || !anchor) return;
+    dragging = false;
+
+    const marked = Array.from(grid.querySelectorAll('.cell.dragging'));
+    clearDrag();
+
+    if (marked.length <= 1) {
+      // 只点了一下 → 弹菜单让人选状态
+      showPopup(anchor.cell);
+      return;
+    }
+
+    const hours = marked.map(c => parseInt(c.dataset.hour, 10));
+    apply(anchor.day, Math.min(...hours), Math.max(...hours) + 1, brush);
+    anchor = null;
+  });
+
+  popup.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const raw = btn.dataset.state;
+      if (raw !== 'clear') brush = raw;      // 记住这个状态，下次拖拽就用它
+      const state = raw === 'clear' ? null : raw;
+      const current = anchor;
+      hidePopup();
+      if (current) apply(current.day, current.hour, current.hour + 1, state);
+      anchor = null;
+    });
+  });
+
+  document.addEventListener('mousedown', (e) => {
+    if (!popup.hidden && !popup.contains(e.target)) hidePopup();
   });
   {% endif %}
 
@@ -339,53 +472,16 @@
       : data.day + ' ' + hh + ':00 · 没人有空';
   }
 
+  {% if not is_member %}
+  // 不是成员：只能看，点一下看详情
   document.querySelectorAll('.cell').forEach(cell => {
-    cell.addEventListener('click', async () => {
+    cell.addEventListener('click', () => {
       document.querySelectorAll('.cell.selected').forEach(c => c.classList.remove('selected'));
       cell.classList.add('selected');
       render(cell);
-
-      {% if is_member %}
-      const current = cell.dataset.myState || '';
-      let target;
-      if (mode === 'clear') {
-        target = '';
-      } else {
-        // 再点一次同样的状态 = 取消
-        target = (current === mode) ? '' : mode;
-      }
-
-      const body = new URLSearchParams({
-        weekday: cell.dataset.dayIndex,
-        hour: cell.dataset.hour,
-        state: target,
-        scope: (scopeOnly && scopeOnly.checked) ? 'group' : 'global',
-      });
-
-      try {
-        const res = await fetch(MARK_URL, {
-          method: 'POST',
-          headers: {
-            'X-CSRFToken': csrfToken,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: body,
-          credentials: 'same-origin',
-        });
-        const json = await res.json();
-        if (!json.ok) {
-          pstat.textContent = json.error || '保存失败';
-          return;
-        }
-        paintCell(cell, json.cell);
-        render(cell);
-        pstat.textContent = '';
-      } catch (err) {
-        pstat.textContent = '网络出错，再点一次试试';
-      }
-      {% endif %}
     });
   });
+  {% endif %}
 
   // 标出现在这个时段
   const now = new Date();

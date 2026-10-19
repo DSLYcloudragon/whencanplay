@@ -44,10 +44,24 @@ def group_heatmap(request, code):
     })
 
 
+def _cell_json(cell, hour):
+    """把一格整理成前端要的形状。"""
+    return {
+        'count': cell['count'],
+        'names_text': cell['names_text'],
+        'level': cell['level'],
+        'my_state': cell['my_state'],
+        'shown': cell['shown'],
+        'extra': cell['extra'],
+        'day': cell['day'],
+        'hour': hour,
+    }
+
+
 @login_required
 @require_POST
 def mark_hour(request, code):
-    """在热力图上点一格：把我这个小时的可用状态改掉。
+    """在热力图上标时间：点一格，或者按住拖一段。
 
     只在成员之间可用 —— 没入群的人看得见格子，但点不动。
     """
@@ -58,35 +72,30 @@ def mark_hour(request, code):
 
     try:
         weekday = int(request.POST['weekday'])
-        hour = int(request.POST['hour'])
+        start_hour = int(request.POST['hour_start'])
+        end_hour = int(request.POST['hour_end'])
     except (KeyError, ValueError):
         return JsonResponse({'ok': False, 'error': '参数不对'}, status=400)
 
-    if not (0 <= weekday <= 6 and 0 <= hour <= 23):
+    if not (0 <= weekday <= 6 and 0 <= start_hour < 24 and start_hour < end_hour <= 24):
         return JsonResponse({'ok': False, 'error': '参数不对'}, status=400)
 
     state = request.POST.get('state') or None
-    allowed = (None, Availability.STATE_FREE, Availability.STATE_MAYBE, Availability.STATE_BUSY)
+    allowed = (None, Availability.STATE_FREE, Availability.STATE_BUSY)
     if state not in allowed:
         return JsonResponse({'ok': False, 'error': '状态不对'}, status=400)
 
     # scope=group 只改这个群；其余情况写人级默认，对所有群生效
     target_group = group if request.POST.get('scope') == 'group' else None
-    services.set_hour(request.user, target_group, weekday, hour, state)
+    services.set_span(request.user, target_group, weekday, start_hour, end_hour, state)
 
     rows = services.build_rows_with_mine(group, request.user)
-    cell = rows[hour]['cells'][weekday]
+    cells = [
+        _cell_json(rows[hour]['cells'][weekday], hour)
+        for hour in range(start_hour, end_hour)
+    ]
 
-    return JsonResponse({'ok': True, 'cell': {
-        'count': cell['count'],
-        'names_text': cell['names_text'],
-        'level': cell['level'],
-        'my_state': cell['my_state'],
-        'shown': cell['shown'],
-        'extra': cell['extra'],
-        'day': cell['day'],
-        'hour': hour,
-    }})
+    return JsonResponse({'ok': True, 'cells': cells})
 
 
 def old_heatmap(request):

@@ -61,6 +61,10 @@
 </head>
 <body>
   <main class="card">
+    <div style="display:flex; justify-content:flex-end; margin-bottom:10px">
+      {% include "core/_nav.html" %}
+    </div>
+
     <h1>账号</h1>
     <p class="sub">欢迎回来，{{ user.nickname|default:user.username }}。</p>
 
@@ -83,14 +87,6 @@
     <div class="acts">
       <a class="btn" href="{% url 'group_create' %}">建群</a>
       <a class="btn" href="{% url 'group_join' %}">加入群</a>
-    </div>
-
-    <div class="bar">
-      <span class="who">{{ user.nickname|default:user.username }}</span>
-      <form method="post" action="{% url 'logout' %}" class="logoutform">
-        {% csrf_token %}
-        <button class="logoutbtn" type="submit">退出登录</button>
-      </form>
     </div>
   </main>
 </body>

@@ -76,6 +76,20 @@
     button.primary:hover { filter: brightness(1.1); }
     .hint { color: var(--muted); font-size: 12.5px; }
     .empty { color: var(--muted); padding: 14px 0; }
+
+    .toast {
+      position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+      background: #16301f; border: 1px solid rgba(61, 220, 151, .45);
+      color: #9df0c2; font-size: 13.5px; font-weight: 600;
+      padding: 10px 22px; border-radius: 10px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, .5);
+      z-index: 100;
+      animation: toastIn .18s ease-out;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translate(-50%, -8px); }
+      to   { opacity: 1; transform: translate(-50%, 0); }
+    }
   </style>
 </head>
 <body>
@@ -87,7 +101,7 @@
       {% include "core/_nav.html" %}
       {% if next_url %}<a href="{{ next_url }}">← 返回群页面</a>{% endif %}
       <a href="{% url 'my_schedule' %}">我的时间</a>
-      <a href="/">← 回首页</a>
+      <a href="{% url 'account' %}">← 账号</a>
     </div>
   </div>
   <p class="sub">
@@ -131,8 +145,16 @@
 
 </div>
 
+{% if request.GET.saved %}
+  <div class="toast" id="toast">已保存</div>
+{% endif %}
+
 <script>
   const rows = Array.from(document.querySelectorAll('.g'));
+
+  // 保存提示：显示一会儿自己消失
+  const toast = document.getElementById('toast');
+  if (toast) setTimeout(() => toast.remove(), 2200);
 
   function refresh() {
     let owned = 0, fav = 0;

@@ -13,30 +13,67 @@ from .models import Availability, Game, Group, Membership, OwnedGame
 
 
 def index(request):
-    """首页：列出已有的群；登录后还能看到「我加入的群」。"""
-    groups = Group.objects.all()[:12]
+    """首页。
 
-    my_groups = []
-    if request.user.is_authenticated:
-        my_groups = Group.objects.filter(memberships__user=request.user).distinct()
+    登录之后不再停在这里：直接跳到你上次看的群；没看过就跳第一个；一个群都没有就进账号菜单。
+    未登录还是给一个落地页，说明这是什么。
+    """
+    if not request.user.is_authenticated:
+        return render(request, 'core/index.html')
 
-    return render(request, 'core/index.html', {
-        'groups': groups,
-        'my_groups': my_groups,
-    })
+    last_code = request.session.get('last_group_code')
+    if last_code:
+        group = Group.objects.filter(
+            code=last_code, memberships__user=request.user
+        ).first()
+        if group:
+            return redirect('group_heatmap', code=group.code)
+
+    first = (Group.objects
+             .filter(memberships__user=request.user)
+             .order_by('created_at')
+             .first())
+    if first:
+        return redirect('group_heatmap', code=first.code)
+
+    return redirect('account')
+
+
+@login_required
+def account(request):
+    """账号菜单：我的群，以及填时间 / 选游戏 / 建群 / 加入群这些入口。"""
+    my_groups = Group.objects.filter(memberships__user=request.user).distinct()
+    return render(request, 'core/account.html', {'my_groups': my_groups})
 
 
 def group_heatmap(request, code):
-    """某个群的周时间热力图。"""
+    """某个群的周时间热力图。可以用 ?game=ID 只看某一款游戏。"""
     group = get_object_or_404(Group, code=code)
-
-    rows = services.build_rows_with_mine(group, request.user)
-    summary = services.build_summary(group, rows)
-    days = [{'index': i, 'name': n} for i, n in enumerate(services.DAY_NAMES)]
 
     is_member = False
     if request.user.is_authenticated:
         is_member = Membership.objects.filter(user=request.user, group=group).exists()
+        if is_member:
+            # 记住在看哪个群，下次打开首页直接回来
+            request.session['last_group_code'] = group.code
+
+    games = services.group_game_list(group)
+
+    selected_game = None
+    raw_game = request.GET.get('game', '')
+    if raw_game.isdigit():
+        selected_game = Game.objects.filter(pk=int(raw_game)).first()
+
+    rows = services.build_rows_with_mine(group, request.user, only_game=selected_game)
+    summary = services.build_summary(group, rows)
+    days = [{'index': i, 'name': n} for i, n in enumerate(services.DAY_NAMES)]
+
+    if selected_game is not None:
+        summary['members'] = (
+            OwnedGame.objects
+            .filter(game=selected_game, user__memberships__group=group)
+            .values('user').distinct().count()
+        )
 
     return render(request, 'core/heatmap.html', {
         'group': group,
@@ -44,6 +81,8 @@ def group_heatmap(request, code):
         'days': days,
         'summary': summary,
         'is_member': is_member,
+        'games': games,
+        'selected_game': selected_game,
     })
 
 
@@ -295,10 +334,11 @@ def my_games(request):
                 row.is_favorite = want_fav
                 row.save(update_fields=['is_favorite'])
 
-        url = reverse('my_games')
+        params = []
         if next_url:
-            url += '?next=' + quote(next_url)
-        return redirect(url)
+            params.append('next=' + quote(next_url))
+        params.append('saved=1')
+        return redirect(reverse('my_games') + '?' + '&'.join(params))
 
     owned = {
         row.game_id: row.is_favorite

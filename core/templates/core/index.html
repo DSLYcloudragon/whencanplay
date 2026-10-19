@@ -116,41 +116,23 @@
 
     <div class="status">
       <span>●</span>
-      <span>注册、建群、填时间都能用了</span>
+      <span>登录之后，这里会直接变成你正在看的那个群</span>
     </div>
 
-    {% if user.is_authenticated %}
-      <div class="next">
-        <b>我加入的群</b>
-        <div class="grouplist">
-          {% for g in my_groups %}
-            <a class="gs" href="/g/{{ g.code }}/">{{ g.name }} →</a>
-          {% empty %}
-            <span class="hintx">还没加入任何群</span>
-          {% endfor %}
-        </div>
-      </div>
+    <div class="next">
+      <b>登录之后可以做什么</b>
+      <ol>
+        <li>建一个群，拿到链接和邀请码，发到 QQ 群里</li>
+        <li>填一次自己的每周作息，对所有群都生效</li>
+        <li>勾出自己拥有的游戏</li>
+        <li>打开群页面，看哪个时段有几个人、能玩什么</li>
+      </ol>
+    </div>
 
-      <div class="acts">
-        <a class="btn" href="{% url 'group_create' %}">建群</a>
-        <a class="btn" href="{% url 'group_join' %}">加入群</a>
-        <a class="btn" href="{% url 'my_schedule' %}">填我的时间</a>
-        <a class="btn" href="{% url 'my_games' %}">我的游戏</a>
-      </div>
-    {% else %}
-      <div class="next">
-        <b>登录之后可以做什么</b>
-        <ol>
-          <li>建一个群，拿到链接和邀请码，发到 QQ 群里</li>
-          <li>填一次自己的每周作息，对所有群都生效</li>
-          <li>打开群页面，看哪个时段有几个人、都是谁</li>
-        </ol>
-      </div>
-      <div class="acts">
-        <a class="btn" href="{% url 'login' %}">登录</a>
-        <a class="btn" href="{% url 'register' %}">注册</a>
-      </div>
-    {% endif %}
+    <div class="acts">
+      <a class="btn" href="{% url 'login' %}">登录</a>
+      <a class="btn" href="{% url 'register' %}">注册</a>
+    </div>
 
     <div class="authbar">
       {% include "core/_nav.html" %}

@@ -9,6 +9,7 @@ urlpatterns = [
 
     # 页面
     path('', core_views.index, name='index'),
+    path('me/', core_views.account, name='account'),
     path('g/<str:code>/', core_views.group_heatmap, name='group_heatmap'),
     path('g/<str:code>/mark/', core_views.mark_hour, name='mark_hour'),
     path('heatmap/', core_views.old_heatmap, name='old_heatmap'),

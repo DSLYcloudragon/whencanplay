@@ -39,6 +39,35 @@
     }
     .chip b { color: var(--text); font-weight: 600; }
 
+    .gamebar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+      margin-bottom: 14px; font-size: 13px;
+    }
+    .glabel { color: var(--muted); margin-right: 2px; }
+    .gchip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #0f1319; border: 1px solid var(--line); border-radius: 20px;
+      padding: 5px 12px; color: var(--text); text-decoration: none; font-size: 12.5px;
+    }
+    .gchip:hover { border-color: var(--accent); color: var(--accent); }
+    .gchip.on { background: var(--accent); border-color: var(--accent); color: #06121f; font-weight: 700; }
+    .gchip .gn {
+      font-size: 11px; opacity: .75; font-variant-numeric: tabular-nums;
+    }
+    .ghint { color: var(--muted); font-size: 12.5px; }
+    .ghint a { color: var(--accent); text-decoration: none; }
+
+    .filterbar {
+      background: rgba(78,161,255,.10);
+      border: 1px solid rgba(78,161,255,.32);
+      border-radius: 9px;
+      padding: 9px 14px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      color: #cfe4ff;
+    }
+    .filterbar a { color: var(--accent); margin-left: 8px; text-decoration: none; }
+
     .board {
       background: var(--panel); border: 1px solid var(--line);
       border-radius: 12px; padding: 16px 18px 18px;
@@ -210,7 +239,7 @@
     <h1>{{ group.name }}</h1>
     <div class="topright">
       {% include "core/_nav.html" %}
-      <a class="back" href="/">← 回首页</a>
+      <a class="back" href="{% url 'account' %}">← 账号</a>
     </div>
   </div>
   <p class="sub">点任意格子，看这个时段谁有空。数据来自成员自己填的空闲时段，本周是 {{ summary.week_key }}。</p>
@@ -238,12 +267,34 @@
   {% endif %}
 
   <div class="chips">
-    <div class="chip">群成员 <b>{{ summary.members }}</b></div>
+    <div class="chip">{% if selected_game %}拥有这款的人{% else %}群成员{% endif %} <b>{{ summary.members }}</b></div>
     <div class="chip">有人有空的时段 <b>{{ summary.covered_slots }}</b> 个</div>
     {% if summary.busiest.count %}
       <div class="chip">最热 <b>{{ summary.busiest.day }} {{ summary.busiest.hour }}:00</b> · {{ summary.busiest.count }} 人</div>
     {% endif %}
   </div>
+
+  <div class="gamebar">
+    <span class="glabel">大家有空的游戏</span>
+    <a class="gchip {% if not selected_game %}on{% endif %}" href="/g/{{ group.code }}/">全部</a>
+    {% for g in games %}
+      <a class="gchip {% if selected_game and selected_game.pk == g.game_id %}on{% endif %}"
+         href="/g/{{ group.code }}/?game={{ g.game_id }}">{{ g.game__name }} <span class="gn">{{ g.owner_count }}</span></a>
+    {% empty %}
+      <span class="ghint">
+        还没有人勾游戏。
+        {% if is_member %}<a href="{% url 'my_games' %}?next=/g/{{ group.code }}/">去勾我的游戏</a>{% endif %}
+      </span>
+    {% endfor %}
+  </div>
+
+  {% if selected_game %}
+    <div class="filterbar">
+      正在只看《{{ selected_game.name }}》—— 只统计拥有这款的人。
+      最佳 {{ selected_game.best_players }} 人（{{ selected_game.min_players }}–{{ selected_game.max_players }} 人）
+      <a href="/g/{{ group.code }}/">看全部</a>
+    </div>
+  {% endif %}
 
   <div class="board">
     <div class="grid" id="grid">

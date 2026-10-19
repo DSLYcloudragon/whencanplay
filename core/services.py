@@ -16,9 +16,9 @@ import datetime
 from collections import defaultdict
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 
-from .models import Availability
+from .models import Availability, OwnedGame
 
 DAY_NAMES = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 
@@ -88,15 +88,27 @@ def _group_members(group):
     ]
 
 
-def build_grid(group, week_key=None):
+def build_grid(group, week_key=None, only_game=None):
     """{ (星期, 小时): [昵称, ...] }，只统计「有空」的人。
 
     「没空」是主动声明的不方便，和「没填过」在展示上一样，都不算可用人力。
+
+    传了 only_game 就只算「拥有这款游戏的人」——这就是「看这款游戏什么时候人最齐」。
     """
     week_key = week_key or current_week_key()
-    grid = defaultdict(list)
+    members = _group_members(group)
 
-    for user_id, name in _group_members(group):
+    if only_game is not None:
+        member_ids = [user_id for user_id, _ in members]
+        owners = set(
+            OwnedGame.objects
+            .filter(game=only_game, user_id__in=member_ids)
+            .values_list('user_id', flat=True)
+        )
+        members = [(user_id, name) for user_id, name in members if user_id in owners]
+
+    grid = defaultdict(list)
+    for user_id, name in members:
         states = member_states(group, user_id, week_key)
         for cell, state in states.items():
             if state == Availability.STATE_FREE:
@@ -105,10 +117,10 @@ def build_grid(group, week_key=None):
     return grid
 
 
-def build_rows(group, week_key=None):
+def build_rows(group, week_key=None, only_game=None):
     """按小时做行、星期做列 —— 和课表一样。"""
     week_key = week_key or current_week_key()
-    grid = build_grid(group, week_key)
+    grid = build_grid(group, week_key, only_game=only_game)
 
     rows = []
     for hour in range(24):
@@ -275,13 +287,13 @@ def set_span(user, group, weekday, start_hour, end_hour, state):
     return state
 
 
-def build_rows_with_mine(group, viewer, week_key=None):
+def build_rows_with_mine(group, viewer, week_key=None, only_game=None):
     """在 build_rows 的基础上，给每一格标出「我自己」的状态。
 
     这样热力图上就能把你自己填的格子高亮出来，不然点完看不出效果。
     """
     week_key = week_key or current_week_key()
-    rows = build_rows(group, week_key)
+    rows = build_rows(group, week_key, only_game=only_game)
 
     mine = {}
     if viewer is not None and viewer.is_authenticated:
@@ -292,4 +304,18 @@ def build_rows_with_mine(group, viewer, week_key=None):
             cell['my_state'] = mine.get((cell['day_index'], row['hour']))
 
     return rows
+
+
+def group_game_list(group):
+    """这个群里大家拥有的游戏，按拥有者数量从多到少排。
+
+    给热力图旁边的「大家能玩什么」面板用。
+    """
+    return list(
+        OwnedGame.objects
+        .filter(user__memberships__group=group)
+        .values('game_id', 'game__name')
+        .annotate(owner_count=Count('user', distinct=True))
+        .order_by('-owner_count', 'game__name')
+    )
 

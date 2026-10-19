@@ -436,6 +436,11 @@
 
     // 请求排队：网络慢的时候连点几下，回来的顺序才不会乱
     return enqueue(async () => {
+      // 隧道不稳时连接可能一直挂着，浏览器就会永远转圈。
+      // 给个上限，超时就报错，别让界面卡死。
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+
       try {
         const res = await fetch(MARK_URL, {
           method: 'POST',
@@ -445,6 +450,7 @@
           },
           body: body,
           credentials: 'same-origin',
+          signal: controller.signal,
         });
         const json = await res.json();
         if (!json.ok) {
@@ -457,8 +463,11 @@
         });
         pstat.textContent = '';
       } catch (err) {
-        pstat.textContent = '保存失败，刷新页面确认一下';
+        pstat.textContent = err && err.name === 'AbortError'
+          ? '保存超时了，刷新页面确认一下'
+          : '保存失败，刷新页面确认一下';
       } finally {
+        clearTimeout(timer);
         for (let h = from; h < to; h++) {
           const el = cellAt(day, h);
           if (el) el.classList.remove('pending');

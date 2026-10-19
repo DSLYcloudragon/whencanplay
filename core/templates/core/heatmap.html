@@ -212,7 +212,7 @@
 
   <div class="actions">
     {% if is_member %}
-      <a class="actbtn" href="{% url 'my_schedule' %}">✎ 填我的时间</a>
+      <a class="actbtn" href="{% url 'my_schedule' %}?next=/g/{{ group.code }}/">✎ 填我的时间</a>
       <span class="invitehint">邀请码 <code>{{ group.invite_code }}</code> —— 发给朋友，让他在首页「加入群」里输入</span>
     {% elif user.is_authenticated %}
       <a class="actbtn" href="{% url 'group_join' %}">输入邀请码加入这个群</a>

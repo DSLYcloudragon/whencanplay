@@ -179,12 +179,30 @@ def group_join(request):
     return render(request, 'core/group_join.html', {'form': form})
 
 
+def _safe_next(request, default=''):
+    """取出 ?next= 并确认它是本站的相对路径，避免被人拿来跳到外站。"""
+    nxt = request.GET.get('next') or request.POST.get('next') or ''
+    if nxt.startswith('/') and not nxt.startswith('//'):
+        return nxt
+    return default
+
+
 @login_required
 def my_schedule(request):
     """我的每周作息（人级默认）。
 
     这里填的区间对所有群生效；某个群想不一样，后面再做群级覆盖的界面。
+
+    支持 ?next=，这样从某个群的页面点进来后，还能原路返回那个群。
     """
+    next_url = _safe_next(request)
+
+    def back_to_schedule():
+        url = reverse('my_schedule')
+        if next_url:
+            url += '?next=' + quote(next_url)
+        return redirect(url)
+
     if request.method == 'POST':
         form = AvailabilityForm(request.POST)
         if form.is_valid():
@@ -197,7 +215,7 @@ def my_schedule(request):
                 state=form.cleaned_data['state'],
                 week_key='',
             )
-            return redirect('my_schedule')
+            return back_to_schedule()
     else:
         form = AvailabilityForm()
 
@@ -219,6 +237,7 @@ def my_schedule(request):
         'form': form,
         'days': days,
         'total': len(ranges),
+        'next_url': next_url,
     })
 
 
@@ -228,4 +247,9 @@ def delete_range(request, pk):
     item = get_object_or_404(Availability, pk=pk, user=request.user)
     if request.method == 'POST':
         item.delete()
-    return redirect('my_schedule')
+
+    url = reverse('my_schedule')
+    next_url = _safe_next(request)
+    if next_url:
+        url += '?next=' + quote(next_url)
+    return redirect(url)

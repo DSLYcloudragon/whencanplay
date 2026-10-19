@@ -95,6 +95,7 @@
     <h1>我的每周作息</h1>
     <div class="topright">
       {% include "core/_nav.html" %}
+      {% if next_url %}<a href="{{ next_url }}">← 返回群页面</a>{% endif %}
       <a href="/">← 回首页</a>
     </div>
   </div>
@@ -107,6 +108,7 @@
     <h2>加一段时间</h2>
     <form method="post" novalidate>
       {% csrf_token %}
+      {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
       <div class="row">
         <div class="f">
           <label for="{{ form.weekday.id_for_label }}">星期</label>
@@ -149,7 +151,7 @@
             <span class="tag {% if r.state == 'busy' %}busy{% endif %}">
               {{ r.get_state_display }}
             </span>
-            <form method="post" action="{% url 'delete_range' r.pk %}">
+            <form method="post" action="{% url 'delete_range' r.pk %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}">
               {% csrf_token %}
               <button class="del" type="submit">删除</button>
             </form>

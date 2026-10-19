@@ -53,6 +53,22 @@ ALLOWED_HOSTS = [
     if h.strip()
 ]
 
+# 反代（Cloudflare 隧道等）会把浏览器发来的 https 请求转成 http 交给 Django，
+# 但会用 X-Forwarded-Proto 告诉我们原本是 https。
+# 不设这一行，Django 会以为请求是 http，CSRF 的 Origin 校验就会失败（表现为 403）。
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# 允许提交表单的来源。开头带点的通配子域同上。
+# 换来正式域名时，在 .env 里写 DJANGO_CSRF_TRUSTED_ORIGINS=https://你的域名
+CSRF_TRUSTED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get(
+        'DJANGO_CSRF_TRUSTED_ORIGINS',
+        'https://*.trycloudflare.com,http://localhost:8000,http://127.0.0.1:8000',
+    ).split(',')
+    if o.strip()
+]
+
 
 # Application definition
 

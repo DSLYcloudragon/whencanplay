@@ -3,9 +3,10 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from core import views as core_views
+from core.admin_site import admin_site
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin/', admin_site.urls),
 
     # 页面
     path('', core_views.index, name='index'),

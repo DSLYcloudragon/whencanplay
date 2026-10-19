@@ -33,6 +33,9 @@ python manage.py createsuperuser
 > 这个仓库是公开的，README、settings.py、测试代码都算"会被提交"。
 > 要改密码：`python manage.py changepassword admin`
 
+后台和前台的**登录页是同一个**：没登录访问 `/admin/` 会被送到 `/login/`，
+登录完自动回到后台。管理员登录后，「我的」菜单里会多一项「后台管理」。
+
 ### 密钥配置
 
 `config/settings.py` 里的 `SECRET_KEY` 从 `.env` 读取，`.env` 已被 git 忽略。

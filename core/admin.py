@@ -1,10 +1,11 @@
-from django.contrib import admin
+﻿from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
+from .admin_site import admin_site
 from .models import Availability, Game, Group, Membership, OwnedGame, User
 
 
-@admin.register(User)
+@admin.register(User, site=admin_site)
 class UserAdmin(DjangoUserAdmin):
     """在 Django 自带用户后台的基础上，加列我们自己的字段。"""
 
@@ -24,7 +25,7 @@ class MembershipInline(admin.TabularInline):
     autocomplete_fields = ('user',)
 
 
-@admin.register(Group)
+@admin.register(Group, site=admin_site)
 class GroupAdmin(admin.ModelAdmin):
     list_display = ('name', 'code', 'invite_code', 'member_count', 'created_at')
     search_fields = ('name', 'code', 'invite_code')
@@ -36,7 +37,7 @@ class GroupAdmin(admin.ModelAdmin):
         return obj.memberships.count()
 
 
-@admin.register(Membership)
+@admin.register(Membership, site=admin_site)
 class MembershipAdmin(admin.ModelAdmin):
     list_display = ('user', 'group', 'role', 'joined_at')
     list_filter = ('role', 'group')
@@ -44,7 +45,7 @@ class MembershipAdmin(admin.ModelAdmin):
     autocomplete_fields = ('user', 'group')
 
 
-@admin.register(Availability)
+@admin.register(Availability, site=admin_site)
 class AvailabilityAdmin(admin.ModelAdmin):
     list_display = ('user', 'weekday_display', 'start', 'end', 'state', 'group', 'week_key')
     list_filter = ('state', 'weekday', 'group')
@@ -56,7 +57,7 @@ class AvailabilityAdmin(admin.ModelAdmin):
         return '周一周二周三周四周五周六周日'[obj.weekday * 2: obj.weekday * 2 + 2]
 
 
-@admin.register(Game)
+@admin.register(Game, site=admin_site)
 class GameAdmin(admin.ModelAdmin):
     list_display = (
         'name', 'min_players', 'best_players', 'max_players',
@@ -70,7 +71,7 @@ class GameAdmin(admin.ModelAdmin):
         return obj.owners.count()
 
 
-@admin.register(OwnedGame)
+@admin.register(OwnedGame, site=admin_site)
 class OwnedGameAdmin(admin.ModelAdmin):
     list_display = ('user', 'game', 'is_favorite')
     list_filter = ('is_favorite', 'game')

@@ -53,6 +53,11 @@
     <a class="ditem" href="{% url 'group_create' %}">建群</a>
     <a class="ditem" href="{% url 'group_join' %}">加入群</a>
 
+    {% if user.is_staff %}
+      <div class="dsep"></div>
+      <a class="ditem" href="/admin/">后台管理</a>
+    {% endif %}
+
     <div class="dsep"></div>
     <form method="post" action="{% url 'logout' %}">
       {% csrf_token %}

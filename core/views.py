@@ -1,7 +1,10 @@
+from urllib.parse import quote
+
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from . import services
@@ -146,9 +149,20 @@ def group_create(request):
     return render(request, 'core/group_new.html', {'form': form})
 
 
-@login_required
 def group_join(request):
-    """凭邀请码入群。已经是成员就直接跳过去。"""
+    """凭邀请码入群。
+
+    没登录也能先填码：提交时把码塞进 next，登录完再回来，不用重背那串随机字符。
+    """
+    if not request.user.is_authenticated:
+        code = ''
+        if request.method == 'POST':
+            code = (request.POST.get('invite_code') or '').strip()
+        target = reverse('group_join')
+        if code:
+            target += '?code=' + quote(code)
+        return redirect(f"{reverse('login')}?next={quote(target)}")
+
     if request.method == 'POST':
         form = JoinGroupForm(request.POST)
         if form.is_valid():
@@ -160,7 +174,7 @@ def group_join(request):
             )
             return redirect('group_heatmap', code=group.code)
     else:
-        form = JoinGroupForm()
+        form = JoinGroupForm(initial={'invite_code': request.GET.get('code', '')})
 
     return render(request, 'core/group_join.html', {'form': form})
 

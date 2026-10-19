@@ -3,6 +3,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
+from .models import Availability
+from .services import DAY_NAMES
+
 
 class RegisterForm(forms.Form):
     """注册：邮箱 + 昵称 + 密码，就这几个框。
@@ -69,3 +72,69 @@ class RegisterForm(forms.Form):
             nickname=self.cleaned_data['nickname'],
             password=self.cleaned_data['password1'],
         )
+
+
+class GroupCreateForm(forms.Form):
+    name = forms.CharField(
+        label='群名',
+        max_length=64,
+        widget=forms.TextInput(attrs={'placeholder': '比如：深夜食堂', 'autofocus': True}),
+    )
+
+
+class JoinGroupForm(forms.Form):
+    invite_code = forms.CharField(
+        label='邀请码',
+        max_length=12,
+        widget=forms.TextInput(attrs={'placeholder': '8 位邀请码', 'autofocus': True}),
+    )
+
+    def clean_invite_code(self):
+        from .models import Group
+
+        code = self.cleaned_data['invite_code'].strip().lower()
+        if not Group.objects.filter(invite_code=code).exists():
+            raise ValidationError('没有这个邀请码，检查一下有没有输错')
+        return code
+
+
+class AvailabilityForm(forms.Form):
+    """加一段空闲时间。
+
+    开始和结束都填到半小时。结束早于开始表示跨到第二天凌晨。
+    """
+
+    weekday = forms.ChoiceField(
+        label='星期',
+        choices=[(i, name) for i, name in enumerate(DAY_NAMES)],
+    )
+    start = forms.TimeField(
+        label='从',
+        widget=forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
+        initial='20:00',
+    )
+    end = forms.TimeField(
+        label='到',
+        widget=forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
+        initial='23:00',
+        help_text='比开始时间早就表示跨到第二天凌晨',
+    )
+    state = forms.ChoiceField(
+        label='状态',
+        choices=Availability.STATE_CHOICES,
+        initial=Availability.STATE_FREE,
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        start = cleaned.get('start')
+        end = cleaned.get('end')
+
+        for field, value in (('start', start), ('end', end)):
+            if value and value.minute not in (0, 30):
+                self.add_error(field, '时间要填到整点或半点')
+
+        if start and end and start == end:
+            self.add_error('end', '开始和结束不能是同一时刻')
+
+        return cleaned

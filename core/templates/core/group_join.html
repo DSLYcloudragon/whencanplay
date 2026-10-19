@@ -1,0 +1,25 @@
+{% extends "core/auth_base.html" %}
+
+{% block title %}加入群{% endblock %}
+
+{% block content %}
+  <h1>加入群</h1>
+  <p class="sub">输入群主给你的邀请码。没有的话，让他把邀请码发到群里。</p>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<div class="err">{{ field.errors|join:" " }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    <button type="submit">加入</button>
+  </form>
+
+  <p class="foot">
+    <a href="{% url 'group_create' %}">建一个新的群</a> ·
+    <a href="/">回首页</a>
+  </p>
+{% endblock %}

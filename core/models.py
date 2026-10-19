@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from .utils import random_code
+
 
 class User(AbstractUser):
     """用户。
@@ -42,6 +44,24 @@ class Group(models.Model):
 
     def __str__(self):
         return self.name
+
+    @classmethod
+    def new_code(cls):
+        """生成一个没被占用的链接标识。"""
+        for _ in range(30):
+            code = random_code(8)
+            if not cls.objects.filter(code=code).exists():
+                return code
+        raise RuntimeError('生成群标识失败：连续 30 次都撞上了')
+
+    @classmethod
+    def new_invite_code(cls):
+        """生成一个没被占用的邀请码。"""
+        for _ in range(30):
+            code = random_code(8)
+            if not cls.objects.filter(invite_code=code).exists():
+                return code
+        raise RuntimeError('生成邀请码失败：连续 30 次都撞上了')
 
     def owner(self):
         """当前的群主。没有 owner 字段，是因为成员关系只保留一份真相。"""

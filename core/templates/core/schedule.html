@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>我的每周作息 · WhenCanPlay</title>
+  <style>
+    :root {
+      --bg: #0d0f13;
+      --panel: #151920;
+      --line: #232932;
+      --text: #e6e9ef;
+      --muted: #8b93a1;
+      --accent: #4ea1ff;
+      --danger: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 32px 24px 64px;
+      background: radial-gradient(1400px 700px at 50% -15%, #17202c 0%, var(--bg) 62%);
+      color: var(--text);
+      font-family: -apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; }
+
+    .topbar { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+    h1 { margin: 0; font-size: 22px; }
+    .topright { margin-left: auto; display: flex; align-items: center; gap: 14px; font-size: 13px; }
+    .topright a { color: var(--muted); text-decoration: none; }
+    .topright a:hover { color: var(--accent); }
+    .topright .who { color: var(--text); }
+    .logoutform { margin: 0; display: inline; }
+    .logoutbtn {
+      background: none; border: 0; padding: 0; cursor: pointer;
+      color: var(--muted); font-size: 13px; font-family: inherit;
+    }
+    .logoutbtn:hover { color: var(--accent); }
+    .sub { margin: 0 0 22px; color: var(--muted); font-size: 13px; }
+
+    .card {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 12px; padding: 18px 20px; margin-bottom: 18px;
+    }
+    .card h2 { margin: 0 0 14px; font-size: 15px; font-weight: 600; }
+
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+    .f { display: flex; flex-direction: column; gap: 5px; }
+    .f label { font-size: 12.5px; color: var(--muted); }
+    select, input[type=time] {
+      background: #0f1319; border: 1px solid var(--line); border-radius: 8px;
+      color: var(--text); padding: 9px 11px; font-size: 14px; font-family: inherit;
+    }
+    select:focus, input:focus { outline: none; border-color: var(--accent); }
+    button.primary {
+      background: var(--accent); color: #06121f; border: 0; border-radius: 9px;
+      padding: 10px 20px; font-size: 14px; font-weight: 700; cursor: pointer;
+      font-family: inherit;
+    }
+    button.primary:hover { filter: brightness(1.1); }
+
+    .err { color: var(--danger); font-size: 12.5px; }
+    .help { color: var(--muted); font-size: 12px; }
+
+    .item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 9px 0; border-bottom: 1px solid var(--line);
+    }
+    .item:last-child { border-bottom: 0; }
+    .dayname { width: 46px; color: var(--muted); font-size: 13px; }
+    .range { font-variant-numeric: tabular-nums; font-size: 14px; }
+    .tag {
+      font-size: 11.5px; padding: 2px 8px; border-radius: 20px;
+      background: rgba(78,161,255,.15); color: #9fcaff;
+    }
+    .tag.maybe { background: rgba(255,193,7,.14); color: #ffd166; }
+    .tag.busy { background: rgba(255,107,107,.14); color: #ff9b9b; }
+    .cross { color: var(--muted); font-size: 12px; }
+    .del {
+      margin-left: auto; background: none; border: 0; cursor: pointer;
+      color: var(--muted); font-size: 12.5px; font-family: inherit; padding: 4px 6px;
+    }
+    .del:hover { color: var(--danger); }
+
+    .empty { color: var(--muted); font-size: 13.5px; padding: 8px 0; }
+    .count { color: var(--muted); font-size: 12.5px; margin-left: 8px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <h1>我的每周作息</h1>
+    <div class="topright">
+      {% include "core/_nav.html" %}
+      <a href="/">← 回首页</a>
+    </div>
+  </div>
+  <p class="sub">
+    这里填的是「我一般什么时候有空」。填一次，对所有加入的群都生效。
+    结束时间如果比开始早，就表示跨到第二天凌晨（比如 22:00 到 02:00）。
+  </p>
+
+  <div class="card">
+    <h2>加一段时间</h2>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="row">
+        <div class="f">
+          <label for="{{ form.weekday.id_for_label }}">星期</label>
+          {{ form.weekday }}
+        </div>
+        <div class="f">
+          <label for="{{ form.start.id_for_label }}">从</label>
+          {{ form.start }}
+        </div>
+        <div class="f">
+          <label for="{{ form.end.id_for_label }}">到</label>
+          {{ form.end }}
+        </div>
+        <div class="f">
+          <label for="{{ form.state.id_for_label }}">状态</label>
+          {{ form.state }}
+        </div>
+        <button class="primary" type="submit">添加</button>
+      </div>
+      {% if form.errors %}
+        <div class="err" style="margin-top:10px">
+          {% for field in form %}{% for e in field.errors %}{{ e }} {% endfor %}{% endfor %}
+        </div>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>我填的时间<span class="count">共 {{ total }} 段</span></h2>
+
+    {% if not total %}
+      <p class="empty">还一段都没填。上面加一段时间试试。</p>
+    {% else %}
+      {% for day in days %}
+        {% for r in day.ranges %}
+          <div class="item">
+            <span class="dayname">{{ day.name }}</span>
+            <span class="range">{{ r.start|time:"H:i" }} – {{ r.end|time:"H:i" }}</span>
+            {% if r.end < r.start %}<span class="cross">跨到次日</span>{% endif %}
+            <span class="tag {% if r.state == 'maybe' %}maybe{% elif r.state == 'busy' %}busy{% endif %}">
+              {{ r.get_state_display }}
+            </span>
+            <form method="post" action="{% url 'delete_range' r.pk %}">
+              {% csrf_token %}
+              <button class="del" type="submit">删除</button>
+            </form>
+          </div>
+        {% endfor %}
+      {% endfor %}
+    {% endif %}
+  </div>
+
+</div>
+</body>
+</html>

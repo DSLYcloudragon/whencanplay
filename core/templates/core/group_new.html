@@ -1,0 +1,25 @@
+{% extends "core/auth_base.html" %}
+
+{% block title %}建群{% endblock %}
+
+{% block content %}
+  <h1>建一个群</h1>
+  <p class="sub">建完会得到一个链接和一个邀请码，发到 QQ 群里就行。</p>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<div class="err">{{ field.errors|join:" " }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    <button type="submit">创建</button>
+  </form>
+
+  <p class="foot">
+    <a href="{% url 'group_join' %}">有邀请码？直接加入</a> ·
+    <a href="/">回首页</a>
+  </p>
+{% endblock %}

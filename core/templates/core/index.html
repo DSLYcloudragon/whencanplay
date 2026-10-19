@@ -87,6 +87,15 @@
       color: var(--muted); font-size: 13px; font-family: inherit;
     }
     .logoutbtn:hover { color: var(--accent); }
+    .grouplist { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .gs {
+      display: inline-block; padding: 6px 14px; border-radius: 8px;
+      background: #0f1319; border: 1px solid var(--line);
+      color: var(--text); text-decoration: none; font-size: 13px;
+    }
+    .gs:hover { border-color: var(--accent); color: var(--accent); }
+    .hintx { color: var(--muted); font-size: 13px; }
+    .acts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
     .next b { color: var(--text); font-weight: 600; }
     .next ol { margin: 10px 0 0; padding-left: 20px; }
     .next li { margin: 4px 0; }
@@ -107,32 +116,40 @@
 
     <div class="status">
       <span>●</span>
-      <span>热力图已经接上真实数据了</span>
+      <span>注册、建群、填时间都能用了</span>
     </div>
 
-    <div style="margin:22px 0 0; display:flex; flex-wrap:wrap; gap:10px">
-      {% for g in groups %}
-        <a class="btn" href="/g/{{ g.code }}/">{{ g.name }} →</a>
-      {% empty %}
-        <p class="next" style="margin:0">
-          还没有任何群。在命令行跑一遍
-          <code>python manage.py seed_demo</code>
-          造一个演示群。
-        </p>
-      {% endfor %}
-    </div>
+    {% if user.is_authenticated %}
+      <div class="next">
+        <b>我加入的群</b>
+        <div class="grouplist">
+          {% for g in my_groups %}
+            <a class="gs" href="/g/{{ g.code }}/">{{ g.name }} →</a>
+          {% empty %}
+            <span class="hintx">还没加入任何群</span>
+          {% endfor %}
+        </div>
+      </div>
 
-    <div class="next">
-      <b>这一步改动的东西</b>
-      <ol>
-        <li>可以注册、登录、退出了（邮箱当登录名，不发验证邮件）</li>
-        <li>热力图查的是 <code>Availability</code> 表，不再是写死的数据</li>
-        <li>每个群有自己的地址：<code>/g/群标识/</code></li>
-      </ol>
-      <p style="margin-top:14px">
-        后台在 <code>/admin/</code>，可以在那里直接加空闲时段，刷新就变。
-      </p>
-    </div>
+      <div class="acts">
+        <a class="btn" href="{% url 'group_create' %}">建群</a>
+        <a class="btn" href="{% url 'group_join' %}">加入群</a>
+        <a class="btn" href="{% url 'my_schedule' %}">填我的时间</a>
+      </div>
+    {% else %}
+      <div class="next">
+        <b>登录之后可以做什么</b>
+        <ol>
+          <li>建一个群，拿到链接和邀请码，发到 QQ 群里</li>
+          <li>填一次自己的每周作息，对所有群都生效</li>
+          <li>打开群页面，看哪个时段有几个人、都是谁</li>
+        </ol>
+      </div>
+      <div class="acts">
+        <a class="btn" href="{% url 'login' %}">登录</a>
+        <a class="btn" href="{% url 'register' %}">注册</a>
+      </div>
+    {% endif %}
 
     <div class="authbar">
       {% include "core/_nav.html" %}

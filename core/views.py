@@ -1,34 +1,45 @@
 from django.contrib.auth import login as auth_login
+from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from . import services
-from .forms import RegisterForm
-from .models import Group
+from .forms import AvailabilityForm, GroupCreateForm, JoinGroupForm, RegisterForm
+from .models import Availability, Group, Membership
 
 
 def index(request):
-    """首页：说明这是什么，并列出已有的群。"""
+    """首页：列出已有的群；登录后还能看到「我加入的群」。"""
     groups = Group.objects.all()[:12]
-    return render(request, 'core/index.html', {'groups': groups})
+
+    my_groups = []
+    if request.user.is_authenticated:
+        my_groups = Group.objects.filter(memberships__user=request.user).distinct()
+
+    return render(request, 'core/index.html', {
+        'groups': groups,
+        'my_groups': my_groups,
+    })
 
 
 def group_heatmap(request, code):
-    """某个群的周时间热力图。
-
-    数据来自 Availability 表，不再是写死的假数据。
-    """
+    """某个群的周时间热力图。"""
     group = get_object_or_404(Group, code=code)
 
     rows = services.build_rows(group)
     summary = services.build_summary(group, rows)
     days = [{'index': i, 'name': n} for i, n in enumerate(services.DAY_NAMES)]
 
+    is_member = False
+    if request.user.is_authenticated:
+        is_member = Membership.objects.filter(user=request.user, group=group).exists()
+
     return render(request, 'core/heatmap.html', {
         'group': group,
         'rows': rows,
         'days': days,
         'summary': summary,
+        'is_member': is_member,
     })
 
 
@@ -41,11 +52,7 @@ def old_heatmap(request):
 
 
 def register(request):
-    """注册。
-
-    没有「验证邮箱」这一步：邮箱只是登录用的账号名。
-    注册成功后直接登录，不让用户再输一遍密码。
-    """
+    """注册。邮箱只当登录名，不发验证邮件；注册成功直接登录。"""
     if request.user.is_authenticated:
         return redirect('index')
 
@@ -59,3 +66,97 @@ def register(request):
         form = RegisterForm()
 
     return render(request, 'core/register.html', {'form': form})
+
+
+@login_required
+def group_create(request):
+    """建群：生成链接标识和邀请码，创建者自动成为群主。"""
+    if request.method == 'POST':
+        form = GroupCreateForm(request.POST)
+        if form.is_valid():
+            group = Group.objects.create(
+                name=form.cleaned_data['name'],
+                code=Group.new_code(),
+                invite_code=Group.new_invite_code(),
+            )
+            Membership.objects.create(
+                user=request.user,
+                group=group,
+                role=Membership.ROLE_OWNER,
+            )
+            return redirect('group_heatmap', code=group.code)
+    else:
+        form = GroupCreateForm()
+
+    return render(request, 'core/group_new.html', {'form': form})
+
+
+@login_required
+def group_join(request):
+    """凭邀请码入群。已经是成员就直接跳过去。"""
+    if request.method == 'POST':
+        form = JoinGroupForm(request.POST)
+        if form.is_valid():
+            group = Group.objects.get(invite_code=form.cleaned_data['invite_code'])
+            Membership.objects.get_or_create(
+                user=request.user,
+                group=group,
+                defaults={'role': Membership.ROLE_MEMBER},
+            )
+            return redirect('group_heatmap', code=group.code)
+    else:
+        form = JoinGroupForm()
+
+    return render(request, 'core/group_join.html', {'form': form})
+
+
+@login_required
+def my_schedule(request):
+    """我的每周作息（人级默认）。
+
+    这里填的区间对所有群生效；某个群想不一样，后面再做群级覆盖的界面。
+    """
+    if request.method == 'POST':
+        form = AvailabilityForm(request.POST)
+        if form.is_valid():
+            Availability.objects.create(
+                user=request.user,
+                group=None,
+                weekday=int(form.cleaned_data['weekday']),
+                start=form.cleaned_data['start'],
+                end=form.cleaned_data['end'],
+                state=form.cleaned_data['state'],
+                week_key='',
+            )
+            return redirect('my_schedule')
+    else:
+        form = AvailabilityForm()
+
+    ranges = list(
+        Availability.objects
+        .filter(user=request.user, group__isnull=True, week_key='')
+        .order_by('weekday', 'start')
+    )
+
+    days = []
+    for index, name in enumerate(services.DAY_NAMES):
+        days.append({
+            'index': index,
+            'name': name,
+            'ranges': [r for r in ranges if r.weekday == index],
+        })
+
+    return render(request, 'core/schedule.html', {
+        'form': form,
+        'days': days,
+        'total': len(ranges),
+    })
+
+
+@login_required
+def delete_range(request, pk):
+    """删掉自己的一段空闲时间。只允许 POST，避免被链接误删。"""
+    item = get_object_or_404(Availability, pk=pk, user=request.user)
+    if request.method == 'POST':
+        item.delete()
+    return redirect('my_schedule')

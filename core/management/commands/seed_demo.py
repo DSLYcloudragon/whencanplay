@@ -134,8 +134,9 @@ class Command(BaseCommand):
         )
 
         self.stdout.write(self.style.SUCCESS(
-            f'群：{group.name}（链接标识 {group.code}）\n'
+            f'群：{group.name}\n'
+            f'  链接标识 {group.code}   →  /g/{group.code}/\n'
+            f'  邀请码   {group.invite_code}\n'
             f'成员：{group.memberships.count()} 人（本次新建 {created_users} 人）\n'
-            f'空闲区间：{count} 段 + 1 段群级覆盖\n'
-            f'打开：/g/{group.code}/'
+            f'空闲区间：{count} 段 + 1 段群级覆盖'
         ))

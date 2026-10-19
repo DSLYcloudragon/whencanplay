@@ -63,6 +63,19 @@ python manage.py seed_test_users  # 3 个能登录的测试账号
 > `seed_demo` 造的 `demo_*` 账号是纯数据账号，**没有密码、登不进去**，
 > 只用来把热力图撑起来。
 
+### 现在能做什么
+
+登录之后：
+
+| 地址 | 作用 |
+|---|---|
+| `/groups/new/` | 建群，创建者自动成为群主 |
+| `/groups/join/` | 填邀请码入群 |
+| `/me/schedule/` | 填我的每周作息（人级默认，对所有群生效） |
+| `/g/群标识/` | 看这个群的时间热力图 |
+
+演示群的邀请码在 `seed_demo` 的输出里，也可以去 `/admin/core/group/` 查。
+
 ---
 
 ## 目录说明
@@ -78,7 +91,8 @@ kahei/
 └── core/               我们自己的功能
     ├── models.py       数据表定义（6 张表）
     ├── services.py     计算核心：把区间叠起来、算成热力图
-    ├── forms.py        注册表单
+    ├── forms.py        注册、建群、入群、填时间的表单
+    ├── utils.py        小工具（随机邀请码）
     ├── views.py        页面逻辑
     ├── admin.py        后台配置
     ├── management/
@@ -89,8 +103,11 @@ kahei/
         ├── core/
         │   ├── index.html      首页
         │   ├── heatmap.html    群时间热力图
+        │   ├── schedule.html   我的每周作息
+        │   ├── group_new.html  建群
+        │   ├── group_join.html 加入群
         │   ├── register.html   注册
-        │   ├── auth_base.html  登录/注册共用的外壳
+        │   ├── auth_base.html  登录/注册/建群/入群共用的外壳
         │   └── _nav.html       右上角的登录状态
         └── registration/
             └── login.html      登录（Django 内置视图要求这个路径）
@@ -117,8 +134,8 @@ kahei/
 - [x] 3. **群时间热力图（假数据）** ← 提前做了，先看见产品
 - [x] 4. 热力图接真实数据（查 `Availability` 表 + 覆盖优先级 + 跨午夜）
 - [x] 5. 注册、登录、登出
-- [ ] 6. 建群 + 邀请码入群
-- [ ] 7. 填空闲时间（区间输入）
+- [x] 6. 建群 + 邀请码入群
+- [x] 7. 填空闲时间（区间输入）
 - [ ] 8. 勾选拥有的游戏
 - [ ] 9. 点时段出匹配结果
 - [ ] 10. 确定开黑 + 生成群文案

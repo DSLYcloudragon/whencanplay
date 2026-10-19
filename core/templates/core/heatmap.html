@@ -141,6 +141,18 @@
       color: var(--muted); font-size: 13px; font-family: inherit;
     }
     .logoutbtn:hover { color: var(--accent); }
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .actbtn {
+      display: inline-block; background: var(--accent); color: #06121f;
+      text-decoration: none; font-weight: 700; font-size: 13.5px;
+      padding: 9px 16px; border-radius: 9px;
+    }
+    .actbtn:hover { filter: brightness(1.1); }
+    .invitehint { color: var(--muted); font-size: 12.5px; }
+    .invitehint code {
+      background: #0c0f13; border: 1px solid var(--line); border-radius: 5px;
+      padding: 1px 6px; color: var(--accent); font-size: 12.5px;
+    }
   </style>
 </head>
 <body>
@@ -154,6 +166,17 @@
     </div>
   </div>
   <p class="sub">点任意格子，看这个时段谁有空。数据来自成员自己填的空闲时段，本周是 {{ summary.week_key }}。</p>
+
+  <div class="actions">
+    {% if is_member %}
+      <a class="actbtn" href="{% url 'my_schedule' %}">✎ 填我的时间</a>
+      <span class="invitehint">邀请码 <code>{{ group.invite_code }}</code> —— 发给朋友，让他在首页「加入群」里输入</span>
+    {% elif user.is_authenticated %}
+      <a class="actbtn" href="{% url 'group_join' %}">输入邀请码加入这个群</a>
+    {% else %}
+      <a class="actbtn" href="{% url 'login' %}">登录后加入</a>
+    {% endif %}
+  </div>
 
   <div class="chips">
     <div class="chip">群成员 <b>{{ summary.members }}</b></div>

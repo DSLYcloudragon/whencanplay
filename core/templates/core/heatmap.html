@@ -365,6 +365,9 @@
   }
 
   grid.addEventListener('mousedown', (e) => {
+    // 只认左键。右键/中键不进入拖拽，否则会和浏览器自带的菜单打架
+    if (e.button !== 0) return;
+
     const cell = e.target.closest('.cell');
     if (!cell) return;
     e.preventDefault();
@@ -385,6 +388,15 @@
 
   grid.addEventListener('mousemove', (e) => {
     if (!dragging || !anchor) return;
+
+    // 鼠标在窗口外松开时 mouseup 收不到，靠这里兜底
+    if (e.buttons === 0) {
+      dragging = false;
+      clearDrag();
+      anchor = null;
+      return;
+    }
+
     const cell = e.target.closest('.cell');
     if (!cell) return;
     // 只在自己按下那一列里拖，避免手一抖刷出一大片
@@ -425,6 +437,11 @@
 
   document.addEventListener('mousedown', (e) => {
     if (!popup.hidden && !popup.contains(e.target)) hidePopup();
+  });
+
+  // 格子上不要弹浏览器自带的右键菜单：拖拽时它一冒出来就会打断操作
+  grid.addEventListener('contextmenu', (e) => {
+    if (e.target.closest('.cell')) e.preventDefault();
   });
   {% endif %}
 

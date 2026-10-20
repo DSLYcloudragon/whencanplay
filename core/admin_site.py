@@ -12,7 +12,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 
 
-class WhenCanPlayAdminSite(AdminSite):
+class FreeWindowAdminSite(AdminSite):
     def login(self, request, extra_context=None):
         """admin 自己的登录页，一律改成跳我们的 /login/。
 
@@ -23,4 +23,4 @@ class WhenCanPlayAdminSite(AdminSite):
         return redirect(f"{reverse('login')}?next={target}")
 
 
-admin_site = WhenCanPlayAdminSite(name='admin')
+admin_site = FreeWindowAdminSite(name='admin')

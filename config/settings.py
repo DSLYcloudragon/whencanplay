@@ -40,7 +40,8 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-only-placeholder-not-for-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# 默认开（本地开发方便），服务器上在 .env 里写 DJANGO_DEBUG=0
+DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
 
 # 允许访问的域名。开头带点的是通配子域（.trycloudflare.com 匹配任意子域）。
 # 换正式域名时，在 .env 里写 DJANGO_ALLOWED_HOSTS=你的域名,localhost,127.0.0.1
@@ -52,6 +53,13 @@ ALLOWED_HOSTS = [
     ).split(',')
     if h.strip()
 ]
+
+# 页脚悬挂的 ICP 备案号，例如「粤ICP备2023123456号」。
+# 留空则不显示；备案下来后在 .env 里写 DJANGO_ICP_BEIAN=...
+ICP_BEIAN = os.environ.get('DJANGO_ICP_BEIAN', '')
+
+# 公安联网备案号，例如「粤公网安备 44030502001234号」。同样留空不显示。
+POLICE_BEIAN = os.environ.get('DJANGO_POLICE_BEIAN', '')
 
 # 反代（Cloudflare 隧道等）会把浏览器发来的 https 请求转成 http 交给 Django，
 # 但会用 X-Forwarded-Proto 告诉我们原本是 https。
@@ -93,6 +101,8 @@ LOGOUT_REDIRECT_URL = 'index'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # whitenoise 紧跟在 SecurityMiddleware 后面，负责在 DEBUG=False 时提供静态文件
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -167,7 +177,20 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+
+# collectstatic 收集到这里，交给 whitenoise 或 Nginx 发出去
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# 用 whitenoise 直接发静态文件，省掉在 Nginx 里手写 location
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+}
 
 
 # Email

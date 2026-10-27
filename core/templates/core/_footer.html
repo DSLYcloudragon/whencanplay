@@ -1,0 +1,27 @@
+{% if icp_beian or police_beian %}
+<style>
+  .sitefoot {
+    margin-top: 36px;
+    padding: 18px 12px 26px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 2;
+    color: #6b7280;
+  }
+  .sitefoot a {
+    color: #6b7280;
+    text-decoration: none;
+    margin: 0 7px;
+    white-space: nowrap;
+  }
+  .sitefoot a:hover { color: #9aa3af; text-decoration: underline; }
+</style>
+<div class="sitefoot">
+  {% if icp_beian %}
+    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{{ icp_beian }}</a>
+  {% endif %}
+  {% if police_beian %}
+    <a href="https://beian.mps.gov.cn/" target="_blank" rel="noopener noreferrer">{{ police_beian }}</a>
+  {% endif %}
+</div>
+{% endif %}

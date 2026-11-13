@@ -337,20 +337,17 @@ def my_cycle(request):
         return redirect(url)
 
     if request.method == 'POST':
-        form = CycleForm(request.POST, current=request.user.cycle_days)
+        form = CycleForm(request.POST)
         if form.is_valid():
             request.user.cycle_days = int(form.cleaned_data['cycle_days'])
             request.user.cycle_anchor = form.cleaned_data['cycle_anchor'] or None
             request.user.save(update_fields=['cycle_days', 'cycle_anchor'])
             return back()
     else:
-        form = CycleForm(
-            current=request.user.cycle_days,
-            initial={
-                'cycle_days': request.user.cycle_days,
-                'cycle_anchor': request.user.cycle_anchor,
-            },
-        )
+        form = CycleForm(initial={
+            'cycle_days': request.user.cycle_days,
+            'cycle_anchor': request.user.cycle_anchor,
+        })
 
     # 存下来之后的周期长什么样，直接给人看 14 天
     cycle_days, _ = services.cycle_of(request.user)

@@ -152,31 +152,31 @@ class AvailabilityForm(forms.Form):
         return cleaned
 
 
-# 周期天数的预设，选项文字要让人看得懂
-CYCLE_PRESETS = [
-    (7, '7 天 —— 每周固定（最常见）'),
-    (14, '14 天 —— 大小周 / 单双周'),
-    (4, '4 天 —— 四天一循环的排班'),
-    (8, '8 天 —— 白白小夜小夜大夜大夜休休'),
-    (21, '21 天 —— 三周一循环'),
-    (28, '28 天 —— 四周一循环'),
-]
+# 周期天数的常见值，只是提示，不是限制
+CYCLE_EXAMPLES = '7 = 每周固定　14 = 大小周　8 = 四班三运转　4 = 四天一轮　21 = 三周一循环'
 
 
 class CycleForm(forms.Form):
-    """设置作息周期：多少天一个循环，以及这一轮的第 1 天是哪天。"""
+    """设置作息周期：多少天一个循环，以及这一轮的第 1 天是哪天。
 
-    cycle_days = forms.ChoiceField(label='作息周期', choices=[])
+    周期天数随便填，不做预设限制 —— 只要自己能填得过来。
+    """
+
+    cycle_days = forms.IntegerField(
+        label='多久一个循环（天）',
+        min_value=1,
+        max_value=365,
+        widget=forms.NumberInput(attrs={
+            'min': 1,
+            'max': 365,
+            'placeholder': '例如 7',
+            'style': 'width:120px',
+        }),
+        help_text=CYCLE_EXAMPLES,
+    )
     cycle_anchor = forms.DateField(
         label='这一轮的第 1 天',
         required=False,
         widget=forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
-        help_text='留空表示从本周一算起。周期为 7 天时不用填。',
+        help_text='留空表示从本周一算起。周期是 7 的倍数时会自动对齐到周一。',
     )
-
-    def __init__(self, *args, current=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        choices = list(CYCLE_PRESETS)
-        if current and current not in [c[0] for c in choices]:
-            choices.insert(0, (current, f'{current} 天 —— 当前设置'))
-        self.fields['cycle_days'].choices = choices

@@ -90,15 +90,16 @@
       {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
       <div class="row">
         <div class="f">
-          <label for="{{ form.cycle_days.id_for_label }}">多久一个循环</label>
+          <label for="{{ form.cycle_days.id_for_label }}">{{ form.cycle_days.label }}</label>
           {{ form.cycle_days }}
         </div>
         <div class="f">
-          <label for="{{ form.cycle_anchor.id_for_label }}">这一轮的第 1 天</label>
+          <label for="{{ form.cycle_anchor.id_for_label }}">{{ form.cycle_anchor.label }}</label>
           {{ form.cycle_anchor }}
         </div>
         <button class="primary" type="submit">保存</button>
       </div>
+      <p class="help">{{ form.cycle_days.help_text }}</p>
       <p class="help">{{ form.cycle_anchor.help_text }}</p>
       {% if form.errors %}
         <div class="err">

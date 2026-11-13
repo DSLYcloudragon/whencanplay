@@ -23,8 +23,8 @@ class User(AbstractUser):
     cycle_days = models.PositiveSmallIntegerField(
         '周期天数',
         default=7,
-        validators=[MinValueValidator(1), MaxValueValidator(28)],
-        help_text='你的作息多少天一个循环。7 = 每周重复；14 = 大小周；4 = 四天一轮',
+        validators=[MinValueValidator(1), MaxValueValidator(365)],
+        help_text='你的作息多少天一个循环。7 = 每周重复；14 = 大小周；4 = 四天一轮；想填几天填几天',
     )
     cycle_anchor = models.DateField(
         '周期起点',
@@ -168,7 +168,7 @@ class Availability(models.Model):
     )
     weekday = models.PositiveSmallIntegerField(
         '周期第几天',
-        validators=[MinValueValidator(0), MaxValueValidator(27)],
+        validators=[MinValueValidator(0), MaxValueValidator(364)],
         help_text='0 = 周期第 1 天。周期是 7 时，0=周一 … 6=周日',
     )
     start = models.TimeField('开始', help_text='填到半小时，比如 20:00 或 20:30')

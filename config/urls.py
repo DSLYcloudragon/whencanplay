@@ -24,6 +24,7 @@ urlpatterns = [
     path('me/schedule/', core_views.my_schedule, name='my_schedule'),
     path('me/schedule/mark/', core_views.schedule_mark, name='schedule_mark'),
     path('me/cycle/', core_views.my_cycle, name='my_cycle'),
+    path('me/share/', core_views.share_schedule, name='share_schedule'),
     path('me/schedule/<int:pk>/delete/', core_views.delete_range, name='delete_range'),
 
     # 我的游戏

@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from . import services
+from . import services, sharing
 from .forms import CycleForm, GroupCreateForm, JoinGroupForm, RegisterForm
 from .models import Availability, Game, Group, Membership, OwnedGame
 
@@ -375,6 +375,39 @@ def schedule_mark(request):
         for hour in range(start_hour, end_hour)
     ]
     return JsonResponse({'ok': True, 'cells': cells})
+
+
+@login_required
+def share_schedule(request):
+    """作息分享：导出自己的作息码，或者导入别人的。"""
+    next_url = _safe_next(request)
+    message = ''
+    error = ''
+
+    if request.method == 'POST':
+        code = (request.POST.get('code') or '').strip()
+        if not code:
+            error = '先粘贴一个分享码'
+        else:
+            try:
+                count, cycle_days = sharing.import_schedule(request.user, code)
+                message = f'已导入 {count} 段作息，周期 {cycle_days} 天。原来的作息已被覆盖。'
+            except ValueError as exc:
+                error = str(exc)
+
+    code = sharing.export_schedule(request.user)
+    info = sharing.describe_schedule(request.user)
+
+    return render(request, 'core/share.html', {
+        'code': code,
+        'info': info,
+        'message': message,
+        'error': error,
+        'prefill': request.GET.get('code', ''),
+        'share_url': request.build_absolute_uri(
+            reverse('share_schedule') + '?code=' + quote(code)),
+        'next_url': next_url,
+    })
 
 
 @login_required

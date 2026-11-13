@@ -102,12 +102,12 @@ class AvailabilityForm(forms.Form):
     """加一段空闲时间。
 
     开始和结束都填到半小时。结束早于开始表示跨到第二天凌晨。
+
+    周期是 7 天时，第一个字段是「星期」；周期不是 7 天时，它是「第几天」。
+    具体选项在 __init__ 里按用户的周期生成。
     """
 
-    weekday = forms.ChoiceField(
-        label='星期',
-        choices=[(i, name) for i, name in enumerate(DAY_NAMES)],
-    )
+    weekday = forms.ChoiceField(label='星期', choices=[])
     start = forms.TimeField(
         label='从',
         widget=forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
@@ -125,6 +125,18 @@ class AvailabilityForm(forms.Form):
         initial=Availability.STATE_FREE,
     )
 
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        n = (getattr(user, 'cycle_days', None) or 7) if user is not None else 7
+        if n == 7:
+            self.fields['weekday'].label = '星期'
+            self.fields['weekday'].choices = [
+                (i, name) for i, name in enumerate(DAY_NAMES)
+            ]
+        else:
+            self.fields['weekday'].label = '第几天'
+            self.fields['weekday'].choices = [(i, f'第 {i + 1} 天') for i in range(n)]
+
     def clean(self):
         cleaned = super().clean()
         start = cleaned.get('start')
@@ -138,3 +150,33 @@ class AvailabilityForm(forms.Form):
             self.add_error('end', '开始和结束不能是同一时刻')
 
         return cleaned
+
+
+# 周期天数的预设，选项文字要让人看得懂
+CYCLE_PRESETS = [
+    (7, '7 天 —— 每周固定（最常见）'),
+    (14, '14 天 —— 大小周 / 单双周'),
+    (4, '4 天 —— 四天一循环的排班'),
+    (8, '8 天 —— 白白小夜小夜大夜大夜休休'),
+    (21, '21 天 —— 三周一循环'),
+    (28, '28 天 —— 四周一循环'),
+]
+
+
+class CycleForm(forms.Form):
+    """设置作息周期：多少天一个循环，以及这一轮的第 1 天是哪天。"""
+
+    cycle_days = forms.ChoiceField(label='作息周期', choices=[])
+    cycle_anchor = forms.DateField(
+        label='这一轮的第 1 天',
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+        help_text='留空表示从本周一算起。周期为 7 天时不用填。',
+    )
+
+    def __init__(self, *args, current=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        choices = list(CYCLE_PRESETS)
+        if current and current not in [c[0] for c in choices]:
+            choices.insert(0, (current, f'{current} 天 —— 当前设置'))
+        self.fields['cycle_days'].choices = choices

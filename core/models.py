@@ -17,6 +17,22 @@ class User(AbstractUser):
     steam_id = models.CharField('Steam ID', max_length=32, blank=True)
     avatar_url = models.URLField('头像地址', blank=True)
 
+    # ---- 作息周期 ----
+    # 默认 7 天一周，和以前的「周表」完全等价。
+    # 改成 14 就是大小周，改成 4 就是四班三倒。
+    cycle_days = models.PositiveSmallIntegerField(
+        '周期天数',
+        default=7,
+        validators=[MinValueValidator(1), MaxValueValidator(28)],
+        help_text='你的作息多少天一个循环。7 = 每周重复；14 = 大小周；4 = 四天一轮',
+    )
+    cycle_anchor = models.DateField(
+        '周期起点',
+        null=True,
+        blank=True,
+        help_text='这一轮的第 1 天是哪一天。留空按周一算（这样 7 天周期就等于普通周表）',
+    )
+
     class Meta:
         verbose_name = '用户'
         verbose_name_plural = '用户'
@@ -151,9 +167,9 @@ class Availability(models.Model):
         help_text='留空表示人级默认，对所有群生效',
     )
     weekday = models.PositiveSmallIntegerField(
-        '星期几',
-        validators=[MinValueValidator(0), MaxValueValidator(6)],
-        help_text='0 = 周一，6 = 周日',
+        '周期第几天',
+        validators=[MinValueValidator(0), MaxValueValidator(27)],
+        help_text='0 = 周期第 1 天。周期是 7 时，0=周一 … 6=周日',
     )
     start = models.TimeField('开始', help_text='填到半小时，比如 20:00 或 20:30')
     end = models.TimeField('结束', help_text='小于开始时间表示跨到第二天凌晨')

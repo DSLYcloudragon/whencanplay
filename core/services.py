@@ -26,6 +26,11 @@ STACK_LIMIT = 3  # 格子里最多堆几个头像，多的收进 +N
 
 WEEK_MINUTES = 7 * 24 * 60  # 一周有多少分钟，用来做绝对坐标
 
+# 默认周期起点：2026-01-05 是周一。
+# 因为 (任意日期 - 任意周一) % 7 恒等于「星期几」，所以默认锚点保证
+# 「周期 7 天」和旧的普通周表完全等价，老数据不用动。
+MONDAY_EPOCH = datetime.date(2026, 1, 5)
+
 # (是否群级, 是否单周) -> 优先级
 PRIORITY = {
     (False, False): 0,
@@ -40,6 +45,42 @@ def current_week_key(today=None):
     day = today or datetime.date.today()
     iso = day.isocalendar()
     return f'{iso.year}-W{iso.week:02d}'
+
+
+def week_start(week_key):
+    """2026-W42 → 那一周周一的日期。解析失败就退回本周。"""
+    try:
+        year, week = week_key.split('-W')
+        return datetime.date.fromisocalendar(int(year), int(week), 1)
+    except (ValueError, AttributeError):
+        return week_start(current_week_key())
+
+
+def cycle_of(user):
+    """取这个人的作息周期：(天数, 起点日期)。
+
+    周期是 7 的倍数时，把起点归一到那一周的周一 —— 这样「第几天」就等于「星期几」，
+    老数据（按星期几存的）不用迁移也能算对。
+    """
+    n = getattr(user, 'cycle_days', None) or 7
+    anchor = getattr(user, 'cycle_anchor', None) or MONDAY_EPOCH
+    if n % 7 == 0:
+        anchor = anchor - datetime.timedelta(days=anchor.weekday())
+    return n, anchor
+
+
+def phase_of(user, day):
+    """某一天落在这个人周期里的第几天（0 起）。"""
+    n, anchor = cycle_of(user)
+    return (day - anchor).days % n
+
+
+def day_name(user, cycle_day):
+    """给人看的名字：周期 7 天时显示「周一」，否则显示「第 3 天」。"""
+    n, _ = cycle_of(user)
+    if n == 7 and 0 <= cycle_day < 7:
+        return DAY_NAMES[cycle_day]
+    return f'第 {cycle_day + 1} 天'
 
 
 def interval_hours(weekday, start, end):
@@ -62,28 +103,93 @@ def interval_hours(weekday, start, end):
     return covered
 
 
-def member_states(group, user_id, week_key):
-    """某个成员这一周每一格的状态。返回 {(星期, 小时): 'free' / 'busy'}。"""
-    entries = Availability.objects.filter(user_id=user_id).filter(
-        Q(group__isnull=True) | Q(group=group)
-    ).filter(
-        Q(week_key='') | Q(week_key=week_key)
+def _expand_entry(day, monday, entry):
+    """把一条 Availability 摊到「这一周的第几列 × 第几个小时」。
+
+    day 是这条记录生效的那一天；跨午夜的会溢到 day+1。
+    """
+    start_min = entry.start.hour * 60 + entry.start.minute
+    end_min = entry.end.hour * 60 + entry.end.minute
+    duration = (end_min - start_min) % 1440 or 1440   # 开始等于结束 = 整天
+
+    begin = start_min
+    finish = begin + duration
+    base_col = (day - monday).days
+
+    hour = begin // 60
+    while hour * 60 < finish:
+        if (hour + 1) * 60 > begin:
+            # hour 是「从当天 0 点算起的第几个小时」，除以 24 得到跨到了第几天
+            offset, hour_of_day = divmod(hour, 24)
+            yield base_col + offset, hour_of_day
+        hour += 1
+
+
+def member_states(group, user, week_key):
+    """某个成员这一周每一格的状态。返回 {(星期, 小时): 'free' / 'busy'}。
+
+    周期不是 7 天时，同一个「星期」在不同周对应不同的周期第几天，
+    所以要按**具体日期**去查，不能按星期直接查。
+    """
+    monday = week_start(week_key)
+    n, _ = cycle_of(user)
+
+    # 多取前一天：跨午夜的区间要从前一天溢进来
+    phase_by_date = {}
+    for offset in range(-1, 7):
+        d = monday + datetime.timedelta(days=offset)
+        phase_by_date[d] = phase_of(user, d)
+
+    recurring_phases = {p for p in phase_by_date.values()}
+    weekdays = set(recurring_phases) | set(range(7))
+
+    entries = list(
+        Availability.objects
+        .filter(user=user)
+        .filter(Q(group__isnull=True) | Q(group=group))
+        .filter(Q(week_key='') | Q(week_key=week_key))
+        .filter(weekday__in=weekdays)
     )
 
-    layered = {}
+    by_phase = defaultdict(list)
+    single_week = []
     for item in entries:
-        level = PRIORITY[(item.group_id is not None, bool(item.week_key))]
-        for cell in interval_hours(item.weekday, item.start, item.end):
-            current = layered.get(cell)
-            if current is None or level >= current[0]:
-                layered[cell] = (level, item.state)
+        if item.week_key:
+            single_week.append(item)
+        else:
+            by_phase[item.weekday].append(item)
 
-    return {cell: state for cell, (_, state) in layered.items()}
+    layered = {}
+
+    def put(col, hour, level, state):
+        if not (0 <= col <= 6):
+            return
+        current = layered.get((col, hour))
+        if current is None or level >= current[0]:
+            layered[(col, hour)] = (level, state)
+
+    # 循环作息：按日期落在周期第几天来取
+    for day, phase in phase_by_date.items():
+        for item in by_phase.get(phase, []):
+            level = PRIORITY[(item.group_id is not None, False)]
+            for col, hour in _expand_entry(day, monday, item):
+                put(col, hour, level, item.state)
+
+    # 单周例外：weekday 就是「这一周的星期几」，和周期无关
+    for item in single_week:
+        if not (0 <= item.weekday <= 6):
+            continue
+        day = monday + datetime.timedelta(days=item.weekday)
+        level = PRIORITY[(item.group_id is not None, True)]
+        for col, hour in _expand_entry(day, monday, item):
+            put(col, hour, level, item.state)
+
+    return {(col, hour): state for (col, hour), (_, state) in layered.items()}
 
 
 def _group_members(group):
     return [
-        (m.user_id, m.user.nickname or m.user.username)
+        (m.user, m.user.nickname or m.user.username)
         for m in group.memberships.select_related('user')
     ]
 
@@ -99,17 +205,17 @@ def build_grid(group, week_key=None, only_game=None):
     members = _group_members(group)
 
     if only_game is not None:
-        member_ids = [user_id for user_id, _ in members]
+        member_ids = [user.pk for user, _ in members]
         owners = set(
             OwnedGame.objects
             .filter(game=only_game, user_id__in=member_ids)
             .values_list('user_id', flat=True)
         )
-        members = [(user_id, name) for user_id, name in members if user_id in owners]
+        members = [(user, name) for user, name in members if user.pk in owners]
 
     grid = defaultdict(list)
-    for user_id, name in members:
-        states = member_states(group, user_id, week_key)
+    for user, name in members:
+        states = member_states(group, user, week_key)
         for cell, state in states.items():
             if state == Availability.STATE_FREE:
                 grid[cell].append(name)
@@ -184,11 +290,14 @@ def _entry_to_abs(entry):
     return [begin, begin + duration, entry.state]
 
 
-def _abs_to_kwargs(segment):
-    """绝对坐标 → 可以直接写进 Availability 的字段。"""
+def _abs_to_kwargs(segment, cycle_days=7):
+    """绝对坐标 → 可以直接写进 Availability 的字段。
+
+    跨到周期末尾会绕回第 0 天，所以这里取模。
+    """
     begin, end, state = segment
     return {
-        'weekday': begin // 1440,
+        'weekday': (begin // 1440) % max(cycle_days, 1),
         'start': datetime.time((begin % 1440) // 60, begin % 60),
         'end': datetime.time((end % 1440) // 60, end % 60),
         'state': state,
@@ -254,19 +363,23 @@ def _split_by_day(segments):
     return result
 
 
-def set_span(user, group, weekday, start_hour, end_hour, state):
-    """把「我」在某个星期、某几个小时的状态统一设成 state。
+def set_span(user, group, cycle_day, start_hour, end_hour, state):
+    """把「我」在周期第几天、哪几个小时的状态统一设成 state。
 
     start_hour 和 end_hour 是左闭右开的小时区间，比如 20 到 23 表示 20:00–23:00。
     一次点一格时传成同一个值（20, 21）；拖拽一段时传 (20, 23)。
 
     state 传 None 表示清除。group 传 None 表示写人级默认（对所有群生效）。
+
+    注意 cycle_day 是「周期第几天」，不是星期几 —— 周期为 7 时两者相同。
     """
     if end_hour <= start_hour:
         end_hour = start_hour + 1
 
-    begin = weekday * 1440 + start_hour * 60
-    end = weekday * 1440 + end_hour * 60
+    n, _ = cycle_of(user)
+
+    begin = cycle_day * 1440 + start_hour * 60
+    end = cycle_day * 1440 + end_hour * 60
 
     entries = Availability.objects.filter(user=user, group=group, week_key='')
     segments = [_entry_to_abs(e) for e in entries]
@@ -280,7 +393,7 @@ def set_span(user, group, weekday, start_hour, end_hour, state):
     with transaction.atomic():
         Availability.objects.filter(user=user, group=group, week_key='').delete()
         Availability.objects.bulk_create([
-            Availability(user=user, group=group, week_key='', **_abs_to_kwargs(segment))
+            Availability(user=user, group=group, week_key='', **_abs_to_kwargs(segment, n))
             for segment in segments
         ])
 
@@ -297,7 +410,7 @@ def build_rows_with_mine(group, viewer, week_key=None, only_game=None):
 
     mine = {}
     if viewer is not None and viewer.is_authenticated:
-        mine = member_states(group, viewer.pk, week_key)
+        mine = member_states(group, viewer, week_key)
 
     for row in rows:
         for cell in row['cells']:

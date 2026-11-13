@@ -231,8 +231,9 @@
     .cell.mine-busy::after { background: #ff6b6b; }
     .cell.pending { opacity: .55; }
   </style>
+  <link rel="stylesheet" href="{% static 'core/custom.css' %}">
 </head>
-<body>
+<body class="page-heatmap">
 <div class="wrap">
   <div style="display:none">{% csrf_token %}</div>
 

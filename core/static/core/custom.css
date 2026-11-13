@@ -1,0 +1,129 @@
+/* ==========================================================================
+   Free Window — 自定义样式层
+   ==========================================================================
+
+   这个文件是「最后加载」的样式表，优先级最高，可以覆盖前面所有页面自带的样式。
+   改完保存 → 浏览器 Ctrl + F5 强制刷新。
+
+   ==========================================================================
+   一、你可以改什么
+   ==========================================================================
+
+   颜色、字体、字号、字重、行高、间距、圆角、阴影、描边、渐变、
+   背景图、伪元素装饰、布局比例、按钮质感、动效 —— 基本没有限制。
+
+   背景图和装饰图放 core/static/core/assets/，引用时用相对路径：
+
+       body.page-index {
+         background-image: url("assets/bg-hero.webp");
+       }
+
+   带宽预算是 2 Mbps，规则见 assets/README.md：
+   单张 ≤ 150 KB，全站 ≤ 400 KB，优先 WebP。
+
+   ==========================================================================
+   二、每个页面的 body 都带了身份类名
+   ==========================================================================
+
+   这样你能给不同页面设不同背景，不用碰 HTML：
+
+       body.page-index     落地页
+       body.page-auth      登录 / 注册 / 建群 / 加入群
+       body.page-account   账号菜单
+       body.page-schedule  填我的时间
+       body.page-games     我的游戏
+       body.page-heatmap   群热力图
+
+   例：
+
+       body.page-heatmap {
+         background-image: url("assets/bg-heatmap.webp");
+         background-size: cover;
+         background-attachment: fixed;
+       }
+
+       body.page-index::before {
+         content: "";
+         position: fixed;
+         inset: 0;
+         background: radial-gradient(circle at 50% 0%, #2a4a7a, transparent 60%);
+         opacity: .5;
+         pointer-events: none;
+         z-index: -1;
+       }
+
+   注意 ::before 装饰层一定要写 pointer-events: none，否则会挡住点击。
+
+   ==========================================================================
+   三、现有配色（覆盖前的原样）
+   ==========================================================================
+
+   背景        #0f1115
+   卡片        #171b22
+   描边        #262c36
+   正文        #e6e9ef
+   次要文字    #8b93a1
+   主色（蓝）  #4ea1ff
+   有空（绿）  #3ddc97
+   没空（红）  #ff6b6b
+   强调（黄）  #ffd166
+
+   ==========================================================================
+   四、几个常用的覆盖目标
+   ==========================================================================
+
+   卡片                .card
+   主按钮              .btn, .actbtn, button.primary, button[type=submit]
+   顶部栏              .topbar
+   热力图外框          .board
+   热力图格子          .cell
+   格子明暗四档        .cell.lv1 / .lv2 / .lv3 / .lv4
+   我自己的状态圆点    .cell.mine-free::after / .cell.mine-busy::after
+   右上角菜单按钮      #wcpmenu .menubtn
+   菜单面板            #wcpmenu .dropdown
+   页脚备案号          .sitefoot
+
+   ==========================================================================
+   五、注意事项
+   ==========================================================================
+
+   1. 如果某条规则盖不住，提高选择器精度：body .card { } 而不是 .card { }
+      尽量别用 !important。
+   2. 伪元素装饰层必须 pointer-events: none，否则热力图点不动。
+   3. 背景图如果加在 body 上，配 background-attachment: fixed 在手机上会卡，
+      可以用 media query 关掉：
+
+          @media (max-width: 700px) {
+            body.page-index { background-attachment: scroll; }
+          }
+
+   4. 不要用 @import 引外部 CSS（多一次请求，且离线会失败）。
+   5. 不要引入 CDN 字体。中文字体文件动辄几 MB，2 Mbps 下会卡死。
+      想换字体用系统字体栈，例如：
+
+          font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+
+   ========================================================================== */
+
+/* ==========================================================================
+   从这里开始写你的样式。下面是示例，可以随时删掉。
+   ========================================================================== */
+
+/*
+:root {
+  --accent: #a855f7;
+}
+
+body.page-index {
+  background-image:
+    radial-gradient(1200px 600px at 50% -10%, rgba(78, 161, 255, .18), transparent 70%),
+    url("assets/bg-hero.webp");
+  background-size: cover;
+  background-position: center top;
+}
+
+.card {
+  border-radius: 18px;
+  backdrop-filter: blur(8px);
+}
+*/

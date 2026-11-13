@@ -1,3 +1,5 @@
+import datetime
+from datetime import timedelta
 from urllib.parse import quote
 
 from django.contrib.auth import login as auth_login
@@ -8,7 +10,8 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from . import services
-from .forms import AvailabilityForm, GroupCreateForm, JoinGroupForm, RegisterForm
+from .forms import (AvailabilityForm, CycleForm, GroupCreateForm, JoinGroupForm,
+                   RegisterForm)
 from .models import Availability, Game, Group, Membership, OwnedGame
 
 
@@ -156,7 +159,14 @@ def mark_hour(request, code):
 
     # scope=group 只改这个群；其余情况写人级默认，对所有群生效
     target_group = group if request.POST.get('scope') == 'group' else None
-    services.set_span(request.user, target_group, weekday, start_hour, end_hour, state)
+
+    # 点的是「这一周的星期几」，但存的是「周期第几天」——
+    # 周期为 7 时两者相同；周期为 14 / 4 时要按日期换算。
+    week_key = services.current_week_key()
+    day = services.week_start(week_key) + timedelta(days=weekday)
+    cycle_day = services.phase_of(request.user, day)
+
+    services.set_span(request.user, target_group, cycle_day, start_hour, end_hour, state)
 
     rows = services.build_rows_with_mine(group, request.user)
     cells = [
@@ -270,7 +280,7 @@ def my_schedule(request):
         return redirect(url)
 
     if request.method == 'POST':
-        form = AvailabilityForm(request.POST)
+        form = AvailabilityForm(request.POST, user=request.user)
         if form.is_valid():
             Availability.objects.create(
                 user=request.user,
@@ -283,7 +293,7 @@ def my_schedule(request):
             )
             return back_to_schedule()
     else:
-        form = AvailabilityForm()
+        form = AvailabilityForm(user=request.user)
 
     ranges = list(
         Availability.objects
@@ -291,18 +301,72 @@ def my_schedule(request):
         .order_by('weekday', 'start')
     )
 
+    cycle_days, anchor = services.cycle_of(request.user)
+
     days = []
-    for index, name in enumerate(services.DAY_NAMES):
+    for index in range(cycle_days):
         days.append({
             'index': index,
-            'name': name,
+            'name': services.day_name(request.user, index),
             'ranges': [r for r in ranges if r.weekday == index],
         })
+
+    # 改过周期之后，落在当前周期之外的老数据也要列出来，不能"看不见但还在"
+    orphans = [r for r in ranges if r.weekday >= cycle_days]
 
     return render(request, 'core/schedule.html', {
         'form': form,
         'days': days,
+        'orphans': orphans,
         'total': len(ranges),
+        'next_url': next_url,
+        'cycle_days': cycle_days,
+        'cycle_anchor': anchor,
+    })
+
+
+@login_required
+def my_cycle(request):
+    """设置作息周期：多少天一个循环，以及这一轮的第 1 天是哪天。"""
+    next_url = _safe_next(request)
+
+    def back():
+        url = reverse('my_schedule')
+        if next_url:
+            url += '?next=' + quote(next_url)
+        return redirect(url)
+
+    if request.method == 'POST':
+        form = CycleForm(request.POST, current=request.user.cycle_days)
+        if form.is_valid():
+            request.user.cycle_days = int(form.cleaned_data['cycle_days'])
+            request.user.cycle_anchor = form.cleaned_data['cycle_anchor'] or None
+            request.user.save(update_fields=['cycle_days', 'cycle_anchor'])
+            return back()
+    else:
+        form = CycleForm(
+            current=request.user.cycle_days,
+            initial={
+                'cycle_days': request.user.cycle_days,
+                'cycle_anchor': request.user.cycle_anchor,
+            },
+        )
+
+    # 存下来之后的周期长什么样，直接给人看 14 天
+    cycle_days, _ = services.cycle_of(request.user)
+    today = datetime.date.today()
+    preview = []
+    for offset in range(14):
+        day = today + timedelta(days=offset)
+        preview.append({
+            'date': day,
+            'label': services.day_name(request.user, services.phase_of(request.user, day)),
+        })
+
+    return render(request, 'core/cycle.html', {
+        'form': form,
+        'cycle_days': cycle_days,
+        'preview': preview,
         'next_url': next_url,
     })
 

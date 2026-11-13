@@ -4,25 +4,26 @@
      用绝对定位把它从文档流里拿出来，钉在页面最底部。 */
   body {
     position: relative;
-    padding-bottom: 64px !important;
+    padding-bottom: 92px !important;
   }
   .sitefoot {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
-    padding: 12px 12px 16px;
+    padding: 10px 12px 14px;
     text-align: center;
     font-size: 12px;
-    line-height: 1.9;
+    line-height: 1.75;
     color: #6b7280;
     background: rgba(10, 12, 16, .55);
     border-top: 1px solid rgba(255, 255, 255, .05);
   }
+  /* 两条备案号上下排列，各占一行 */
   .sitefoot a {
+    display: block;
     color: #6b7280;
     text-decoration: none;
-    margin: 0 8px;
     white-space: nowrap;
   }
   .sitefoot a:hover {
@@ -35,7 +36,8 @@
     <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{{ icp_beian }}</a>
   {% endif %}
   {% if police_beian %}
-    <a href="https://beian.mps.gov.cn/" target="_blank" rel="noopener noreferrer">{{ police_beian }}</a>
+    <a href="https://beian.mps.gov.cn/#/query/webSearch?code={{ police_code }}"
+       target="_blank" rel="noopener noreferrer">{{ police_beian }}</a>
   {% endif %}
 </div>
 {% endif %}

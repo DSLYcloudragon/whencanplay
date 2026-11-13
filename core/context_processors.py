@@ -1,5 +1,7 @@
 """模板上下文处理器：所有页面都能拿到右上角「我的」菜单、以及页脚的备案号。"""
 
+import re
+
 from django.conf import settings
 
 from .models import Membership
@@ -22,8 +24,15 @@ def nav_data(request):
             .select_related('group')
             .order_by('-is_pinned', 'joined_at')
         )
+
+    police_beian = getattr(settings, 'POLICE_BEIAN', '')
+    # 公安备案的查询页要带数字编号，例如
+    # https://beian.mps.gov.cn/#/query/webSearch?code=32010202001234
+    police_code = re.sub(r'\D', '', police_beian) if police_beian else ''
+
     return {
         'nav_memberships': memberships,
         'icp_beian': getattr(settings, 'ICP_BEIAN', ''),
-        'police_beian': getattr(settings, 'POLICE_BEIAN', ''),
+        'police_beian': police_beian,
+        'police_code': police_code,
     }

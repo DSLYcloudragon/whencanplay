@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
@@ -108,8 +109,9 @@
       color: var(--accent);
     }
   </style>
+  <link rel="stylesheet" href="{% static 'core/custom.css' %}">
 </head>
-<body>
+<body class="page-index">
   <main class="card">
     <h1>Free Window</h1>
     <p class="tagline">让「今晚开黑吗」这句话，30 秒内有答案。</p>

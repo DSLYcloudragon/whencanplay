@@ -1,0 +1,132 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>我的作息周期 · Free Window</title>
+  <style>
+    :root {
+      --bg: #0f1115; --card: #171b22; --line: #262c36;
+      --text: #e6e9ef; --muted: #8b93a1; --accent: #4ea1ff;
+      --ok: #3ddc97; --danger: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 32px 24px 64px;
+      background: radial-gradient(1400px 700px at 50% -15%, #17202c 0%, var(--bg) 62%);
+      color: var(--text);
+      font-family: -apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+      font-size: 14px; line-height: 1.6;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; }
+    .topbar { display: flex; align-items: center; gap: 16px; }
+    .topbar h1 { font-size: 22px; margin: 0; }
+    .topright { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 13px; }
+    .topright a { color: var(--muted); text-decoration: none; }
+    .topright a:hover { color: var(--accent); }
+    .sub { color: var(--muted); margin: 6px 0 22px; font-size: 13.5px; }
+
+    .card {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 12px; padding: 20px 22px; margin-bottom: 16px;
+    }
+    .card h2 { font-size: 15px; margin: 0 0 14px; }
+
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+    .f { display: flex; flex-direction: column; gap: 5px; }
+    .f label { font-size: 12.5px; color: var(--muted); }
+    input, select {
+      background: #0f1319; border: 1px solid var(--line); border-radius: 8px;
+      color: var(--text); padding: 8px 10px; font-size: 13.5px;
+      font-family: inherit; min-width: 150px;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    button.primary {
+      background: var(--accent); border: 0; color: #06121f; font-weight: 700;
+      padding: 9px 20px; border-radius: 9px; cursor: pointer;
+      font-size: 13.5px; font-family: inherit;
+    }
+    button.primary:hover { filter: brightness(1.08); }
+    .help { color: var(--muted); font-size: 12.5px; margin-top: 6px; }
+    .err { color: var(--danger); font-size: 13px; margin-top: 10px; }
+
+    .preview { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .pv {
+      border: 1px solid var(--line); border-radius: 8px;
+      padding: 6px 10px; font-size: 12.5px; background: #0f1319;
+      min-width: 92px; text-align: center;
+    }
+    .pv .d { color: var(--muted); font-size: 11.5px; display: block; }
+    .pv .p { color: var(--accent); font-weight: 600; }
+    .warn {
+      background: rgba(255, 209, 102, .1); border: 1px solid rgba(255, 209, 102, .35);
+      color: #ffd166; border-radius: 9px; padding: 10px 14px;
+      font-size: 13px; margin-top: 12px;
+    }
+  </style>
+  <link rel="stylesheet" href="{% static 'core/custom.css' %}">
+</head>
+<body class="page-schedule">
+<div class="wrap">
+
+  <div class="topbar">
+    <h1>我的作息周期</h1>
+    <div class="topright">
+      {% include "core/_nav.html" %}
+      <a href="{% url 'my_schedule' %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}">← 我的时间</a>
+    </div>
+  </div>
+
+  <p class="sub">
+    如果你不是「每周固定」，而是几天一轮（四班三倒、大小周），在这里设置周期长度，
+    之后按「第几天」填一次就够了，系统会自动推到现在这一周。
+  </p>
+
+  <div class="card">
+    <h2>设置周期</h2>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+      <div class="row">
+        <div class="f">
+          <label for="{{ form.cycle_days.id_for_label }}">多久一个循环</label>
+          {{ form.cycle_days }}
+        </div>
+        <div class="f">
+          <label for="{{ form.cycle_anchor.id_for_label }}">这一轮的第 1 天</label>
+          {{ form.cycle_anchor }}
+        </div>
+        <button class="primary" type="submit">保存</button>
+      </div>
+      <p class="help">{{ form.cycle_anchor.help_text }}</p>
+      {% if form.errors %}
+        <div class="err">
+          {% for field in form %}{% for e in field.errors %}{{ e }} {% endfor %}{% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="warn">
+        改周期长度会让已填的时间对不上号。如果只是加一个周期，建议先把原来的记下来，改完重填一遍。
+        周期仍然是 7 天的话，什么都不会变。
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>现在的周期是 {{ cycle_days }} 天</h2>
+    <p class="help" style="margin-top:0">下面是从今天起 14 天，每天落在周期的第几天：</p>
+    <div class="preview">
+      {% for p in preview %}
+        <div class="pv">
+          <span class="d">{{ p.date|date:"n/j" }}</span>
+          <span class="p">{{ p.label }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% include "core/_footer.html" %}
+</body>
+</html>

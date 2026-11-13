@@ -95,9 +95,6 @@ class JoinGroupForm(forms.Form):
         return code
 
 
-# 周期天数的常见值，只是提示，不是限制
-CYCLE_EXAMPLES = '7 = 每周固定　14 = 大小周　8 = 四班三运转　4 = 四天一轮　21 = 三周一循环'
-
 
 class CycleForm(forms.Form):
     """设置作息周期：多少天一个循环，以及这一轮的第 1 天是哪天。
@@ -115,7 +112,6 @@ class CycleForm(forms.Form):
             'placeholder': '例如 7',
             'style': 'width:120px',
         }),
-        help_text=CYCLE_EXAMPLES,
     )
     cycle_anchor = forms.DateField(
         label='这一轮的第 1 天',

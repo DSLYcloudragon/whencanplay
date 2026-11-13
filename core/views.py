@@ -10,8 +10,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from . import services
-from .forms import (AvailabilityForm, CycleForm, GroupCreateForm, JoinGroupForm,
-                   RegisterForm)
+from .forms import CycleForm, GroupCreateForm, JoinGroupForm, RegisterForm
 from .models import Availability, Game, Group, Membership, OwnedGame
 
 
@@ -273,28 +272,6 @@ def my_schedule(request):
     """
     next_url = _safe_next(request)
 
-    def back_to_schedule():
-        url = reverse('my_schedule')
-        if next_url:
-            url += '?next=' + quote(next_url)
-        return redirect(url)
-
-    if request.method == 'POST':
-        form = AvailabilityForm(request.POST, user=request.user)
-        if form.is_valid():
-            Availability.objects.create(
-                user=request.user,
-                group=None,
-                weekday=int(form.cleaned_data['weekday']),
-                start=form.cleaned_data['start'],
-                end=form.cleaned_data['end'],
-                state=form.cleaned_data['state'],
-                week_key='',
-            )
-            return back_to_schedule()
-    else:
-        form = AvailabilityForm(user=request.user)
-
     ranges = list(
         Availability.objects
         .filter(user=request.user, group__isnull=True, week_key='')
@@ -334,7 +311,6 @@ def my_schedule(request):
         grid_rows.append({'hour': hour, 'cells': cells})
 
     return render(request, 'core/schedule.html', {
-        'form': form,
         'days': days,
         'orphans': orphans,
         'total': len(ranges),

@@ -3,9 +3,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
-from .models import Availability
-from .services import DAY_NAMES
-
 
 class RegisterForm(forms.Form):
     """注册：邮箱 + 昵称 + 密码，就这几个框。
@@ -96,60 +93,6 @@ class JoinGroupForm(forms.Form):
         if not Group.objects.filter(invite_code=code).exists():
             raise ValidationError('没有这个邀请码，检查一下有没有输错')
         return code
-
-
-class AvailabilityForm(forms.Form):
-    """加一段空闲时间。
-
-    开始和结束都填到半小时。结束早于开始表示跨到第二天凌晨。
-
-    周期是 7 天时，第一个字段是「星期」；周期不是 7 天时，它是「第几天」。
-    具体选项在 __init__ 里按用户的周期生成。
-    """
-
-    weekday = forms.ChoiceField(label='星期', choices=[])
-    start = forms.TimeField(
-        label='从',
-        widget=forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
-        initial='20:00',
-    )
-    end = forms.TimeField(
-        label='到',
-        widget=forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
-        initial='23:00',
-        help_text='比开始时间早就表示跨到第二天凌晨',
-    )
-    state = forms.ChoiceField(
-        label='状态',
-        choices=Availability.STATE_CHOICES,
-        initial=Availability.STATE_FREE,
-    )
-
-    def __init__(self, *args, user=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        n = (getattr(user, 'cycle_days', None) or 7) if user is not None else 7
-        if n == 7:
-            self.fields['weekday'].label = '星期'
-            self.fields['weekday'].choices = [
-                (i, name) for i, name in enumerate(DAY_NAMES)
-            ]
-        else:
-            self.fields['weekday'].label = '第几天'
-            self.fields['weekday'].choices = [(i, f'第 {i + 1} 天') for i in range(n)]
-
-    def clean(self):
-        cleaned = super().clean()
-        start = cleaned.get('start')
-        end = cleaned.get('end')
-
-        for field, value in (('start', start), ('end', end)):
-            if value and value.minute not in (0, 30):
-                self.add_error(field, '时间要填到整点或半点')
-
-        if start and end and start == end:
-            self.add_error('end', '开始和结束不能是同一时刻')
-
-        return cleaned
 
 
 # 周期天数的常见值，只是提示，不是限制

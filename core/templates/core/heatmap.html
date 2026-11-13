@@ -230,6 +230,17 @@
     .cell.mine-free::after { background: #3ddc97; }
     .cell.mine-busy::after { background: #ff6b6b; }
     .cell.pending { opacity: .55; }
+
+    /* 拖拽时跟着鼠标的时间提示 */
+    #tip {
+      position: fixed; z-index: 400; display: none;
+      background: #0b0e13; border: 1px solid var(--accent);
+      color: var(--text); font-size: 12.5px; font-weight: 600;
+      padding: 5px 10px; border-radius: 7px; white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, .55);
+      font-variant-numeric: tabular-nums;
+    }
   </style>
   <link rel="stylesheet" href="{% static 'core/custom.css' %}">
 </head>
@@ -341,6 +352,7 @@
   </div>
 </div>
 
+<div id="tip"></div>
 <div class="popup" id="popup" hidden>
   <div class="ptitle" id="ptitle"></div>
   <div class="prow">
@@ -394,6 +406,29 @@
   function enqueue(task) {
     queue = queue.then(task).catch(() => {});
     return queue;
+  }
+
+  // 拖拽过程中跟着鼠标显示「周几 20:00 – 23:00」
+  const tipEl = document.getElementById('tip');
+
+  function moveTip(x, y, day, from, to) {
+    const c = cellAt(day, from);
+    const name = c ? c.dataset.day : '';
+    const txt = name + ' ' + String(from).padStart(2, '0') + ':00 – '
+              + String(to).padStart(2, '0') + ':00';
+    tipEl.textContent = txt;
+    tipEl.style.display = 'block';
+    const w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+    let left = x + 14;
+    let top = y - h - 12;
+    if (left + w > window.innerWidth - 8) left = x - w - 14;
+    if (top < 8) top = y + 18;
+    tipEl.style.left = Math.max(8, left) + 'px';
+    tipEl.style.top = top + 'px';
+  }
+
+  function hideTip() {
+    tipEl.style.display = 'none';
   }
 
   function showPopup(x, y, day, from, to) {
@@ -496,6 +531,7 @@
     document.querySelectorAll('.cell.selected').forEach(c => c.classList.remove('selected'));
     cell.classList.add('selected');
     render(cell);
+    moveTip(e.clientX, e.clientY, anchor.day, anchor.hour, anchor.hour + 1);
   });
 
   grid.addEventListener('mousemove', (e) => {
@@ -504,6 +540,7 @@
     // 鼠标在窗口外松开时 mouseup 收不到，靠这里兜底
     if (e.buttons === 0) {
       dragging = false;
+      hideTip();
       clearDrag();
       anchor = null;
       return;
@@ -513,12 +550,16 @@
     if (!cell) return;
     // 只在自己按下那一列里拖，避免手一抖刷出一大片
     if (parseInt(cell.dataset.dayIndex, 10) !== anchor.day) return;
-    highlight(anchor.day, anchor.hour, parseInt(cell.dataset.hour, 10));
+    const hoverHour = parseInt(cell.dataset.hour, 10);
+    highlight(anchor.day, anchor.hour, hoverHour);
+    moveTip(e.clientX, e.clientY, anchor.day,
+            Math.min(anchor.hour, hoverHour), Math.max(anchor.hour, hoverHour) + 1);
   });
 
   window.addEventListener('mouseup', (e) => {
     if (!dragging || !anchor) return;
     dragging = false;
+    hideTip();
 
     const marked = Array.from(grid.querySelectorAll('.cell.dragging'));
     clearDrag();

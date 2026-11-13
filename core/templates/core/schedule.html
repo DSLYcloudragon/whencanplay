@@ -116,6 +116,17 @@
     .count { color: var(--muted); font-size: 12.5px; margin-left: 8px; }
     .err { color: var(--danger); font-size: 13px; margin-top: 10px; }
     #pstat { font-size: 12.5px; color: var(--muted); margin-left: 10px; }
+
+    /* 拖拽时跟着鼠标的小提示 */
+    #tip {
+      position: fixed; z-index: 70; display: none;
+      background: #0b0e13; border: 1px solid var(--accent);
+      color: var(--text); font-size: 12.5px; font-weight: 600;
+      padding: 5px 10px; border-radius: 7px; white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, .55);
+      font-variant-numeric: tabular-nums;
+    }
   </style>
   <link rel="stylesheet" href="{% static 'core/custom.css' %}">
 </head>
@@ -164,38 +175,7 @@
     </div>
   </div>
 
-  <div class="card">
-    <h2>精确添加（可以填到半小时）</h2>
-    <form method="post" novalidate>
-      {% csrf_token %}
-      {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
-      <div class="row">
-        <div class="f">
-          <label for="{{ form.weekday.id_for_label }}">{{ form.weekday.label }}</label>
-          {{ form.weekday }}
-        </div>
-        <div class="f">
-          <label for="{{ form.start.id_for_label }}">从</label>
-          {{ form.start }}
-        </div>
-        <div class="f">
-          <label for="{{ form.end.id_for_label }}">到</label>
-          {{ form.end }}
-        </div>
-        <div class="f">
-          <label for="{{ form.state.id_for_label }}">状态</label>
-          {{ form.state }}
-        </div>
-        <button class="primary" type="submit">添加</button>
-      </div>
-      <p class="help">结束时间如果比开始早，就表示跨到第二天凌晨（比如 22:00 到 02:00）。</p>
-      {% if form.errors %}
-        <div class="err">
-          {% for field in form %}{% for e in field.errors %}{{ e }} {% endfor %}{% endfor %}
-        </div>
-      {% endif %}
-    </form>
-  </div>
+  <div style="display:none">{% csrf_token %}</div>
 
   <div class="card">
     <h2>我填的时间<span class="count">共 {{ total }} 段</span></h2>
@@ -248,6 +228,8 @@
   <button type="button" data-state="">清除</button>
 </div>
 
+<div id="tip"></div>
+
 {% include "core/_footer.html" %}
 
 <script>
@@ -258,6 +240,7 @@
   var popup = document.getElementById('popup');
   var pttl = document.getElementById('pttl');
   var pstat = document.getElementById('pstat');
+  var tip = document.getElementById('tip');
   var MARK = "{% url 'schedule_mark' %}";
   var csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
   var csrf = csrfInput ? csrfInput.value : '';
@@ -295,6 +278,28 @@
   function hidePopup() {
     popup.style.display = 'none';
     pending = null;
+  }
+
+  /* ---- 拖拽时跟着鼠标的时间提示 ---- */
+  function rangeText(p) {
+    return dayNames[p.day] + '　' + pad(p.from) + ':00 – ' + pad(p.to) + ':00';
+  }
+
+  function moveTip(x, y) {
+    if (!pending) return;
+    tip.textContent = rangeText(pending);
+    tip.style.display = 'block';
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    var left = x + 14;
+    var top = y - h - 12;
+    if (left + w > window.innerWidth - 8) left = x - w - 14;
+    if (top < 8) top = y + 18;
+    tip.style.left = Math.max(8, left) + 'px';
+    tip.style.top = top + 'px';
+  }
+
+  function hideTip() {
+    tip.style.display = 'none';
   }
 
   function showPopup(x, y) {
@@ -367,11 +372,12 @@
     anchor = { day: +td.dataset.day, hour: +td.dataset.hour };
     pending = { day: anchor.day, from: anchor.hour, to: anchor.hour + 1 };
     markSel(pending.day, pending.from, pending.to);
+    moveTip(e.clientX, e.clientY);
   });
 
   grid.addEventListener('mousemove', function (e) {
     if (!dragging) return;
-    if (e.buttons === 0) { dragging = false; return; }
+    if (e.buttons === 0) { dragging = false; hideTip(); return; }
     var td = e.target.closest('td.ccell');
     if (!td) return;
     var day = +td.dataset.day, hour = +td.dataset.hour;
@@ -381,11 +387,13 @@
     clearSel();
     markSel(day, from, to);
     pending = { day: day, from: from, to: to };
+    moveTip(e.clientX, e.clientY);
   });
 
   document.addEventListener('mouseup', function (e) {
     if (!dragging) return;
     dragging = false;
+    hideTip();
     if (!pending) return;
     showPopup(e.clientX, e.clientY);
   });

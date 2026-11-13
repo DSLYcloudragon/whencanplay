@@ -132,8 +132,11 @@ def import_schedule(user, code):
             raise ValueError('第几天超出范围')
         if not isinstance(start, int) or not isinstance(end, int):
             raise ValueError('时间格式不对')
-        if not (0 <= start <= 1439 and 0 < end <= 1440):
-            raise ValueError('时间超出范围')
+        # end 允许等于 0：模型里「结束 = 00:00」表示到午夜，20:00→24:00 存的就是这样
+        if not (0 <= start <= 1439):
+            raise ValueError('开始时间超出范围')
+        if not (0 <= end <= 1440):
+            raise ValueError('结束时间超出范围')
         if state not in ('f', 'b'):
             raise ValueError('状态不对')
 

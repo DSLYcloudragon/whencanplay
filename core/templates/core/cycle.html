@@ -99,6 +99,10 @@
         <button class="primary" type="submit">保存</button>
       </div>
       <p class="help">{{ form.cycle_anchor.help_text }}</p>
+      <p class="help">
+        如果需要经常改时间（作息不固定），可以选择 <b>7 天</b> 周期，
+        然后在群页面上勾选「只改这一周」——只影响那一周，不动长期规律。
+      </p>
       {% if form.errors %}
         <div class="err">
           {% for field in form %}{% for e in field.errors %}{{ e }} {% endfor %}{% endfor %}

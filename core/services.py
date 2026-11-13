@@ -56,6 +56,31 @@ def week_start(week_key):
         return week_start(current_week_key())
 
 
+def is_week_key(text):
+    """'2026-W42' 这种格式才算数，防止 ?week= 传乱七八糟的东西进来。"""
+    if not isinstance(text, str) or len(text) != 8 or text[4:6] != '-W':
+        return False
+    try:
+        week_start(text)
+        return True
+    except Exception:
+        return False
+
+
+def shift_week(week_key, weeks):
+    """往前/往后挪几周，返回新的 week_key。"""
+    monday = week_start(week_key) + datetime.timedelta(days=7 * weeks)
+    iso = monday.isocalendar()
+    return f'{iso.year}-W{iso.week:02d}'
+
+
+def week_label(week_key):
+    """给人看的日期范围，例如 11/10 – 11/16。"""
+    monday = week_start(week_key)
+    sunday = monday + datetime.timedelta(days=6)
+    return f'{monday.month}/{monday.day} – {sunday.month}/{sunday.day}'
+
+
 def cycle_of(user):
     """取这个人的作息周期：(天数, 起点日期)。
 
@@ -394,6 +419,39 @@ def set_span(user, group, cycle_day, start_hour, end_hour, state):
         Availability.objects.filter(user=user, group=group, week_key='').delete()
         Availability.objects.bulk_create([
             Availability(user=user, group=group, week_key='', **_abs_to_kwargs(segment, n))
+            for segment in segments
+        ])
+
+    return state
+
+
+def set_span_week(user, group, week_key, weekday, start_hour, end_hour, state):
+    """把「我」在**某一周**的某个星期、某几个小时单独设成 state。
+
+    这就是「只改这一周」：循环规律不动，只覆盖这一周。
+    清除（state=None）表示撤掉这一周的覆盖，回到循环规律。
+    """
+    if end_hour <= start_hour:
+        end_hour = start_hour + 1
+
+    begin = weekday * 1440 + start_hour * 60
+    end = weekday * 1440 + end_hour * 60
+
+    entries = Availability.objects.filter(user=user, group=group, week_key=week_key)
+    segments = [_entry_to_abs(e) for e in entries]
+
+    segments = _cut(segments, begin, end)
+    if state:
+        segments.append([begin, end, state])
+
+    segments = _split_by_day(_normalize(segments))
+
+    with transaction.atomic():
+        Availability.objects.filter(user=user, group=group, week_key=week_key).delete()
+        Availability.objects.bulk_create([
+            # 单周覆盖以「一周 7 天」为坐标，和用户自己的周期无关
+            Availability(user=user, group=group, week_key=week_key,
+                         **_abs_to_kwargs(segment, 7))
             for segment in segments
         ])
 

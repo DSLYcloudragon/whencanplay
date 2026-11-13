@@ -241,6 +241,26 @@
       box-shadow: 0 8px 20px rgba(0, 0, 0, .55);
       font-variant-numeric: tabular-nums;
     }
+
+    /* 周次切换 */
+    .weekbar {
+      display: flex; align-items: center; gap: 12px;
+      margin: 0 0 16px; font-size: 13px;
+    }
+    .wbtn {
+      background: #0f1319; border: 1px solid var(--line); border-radius: 8px;
+      color: var(--muted); text-decoration: none; padding: 6px 12px;
+      white-space: nowrap;
+    }
+    .wbtn:hover { border-color: var(--accent); color: var(--accent); }
+    .wlabel { color: var(--text); font-variant-numeric: tabular-nums; }
+    .wlabel b { font-weight: 600; }
+    .wtag {
+      font-size: 11px; padding: 1px 7px; border-radius: 20px; margin-left: 6px;
+      background: rgba(78,161,255,.16); color: #9fcaff;
+    }
+    .wback { color: var(--accent); text-decoration: none; margin-left: 8px; font-size: 12.5px; }
+    .wback:hover { text-decoration: underline; }
   </style>
   <link rel="stylesheet" href="{% static 'core/custom.css' %}">
 </head>
@@ -254,7 +274,20 @@
       {% include "core/_nav.html" %}
     </div>
   </div>
-  <p class="sub">点任意格子，看这个时段谁有空。数据来自成员自己填的空闲时段，本周是 {{ summary.week_key }}。</p>
+  <p class="sub">点任意格子，看这个时段谁有空。数据来自成员自己填的空闲时段。</p>
+
+  <div class="weekbar">
+    <a class="wbtn" href="/g/{{ group.code }}/?week={{ prev_week }}{% if selected_game %}&game={{ selected_game.pk }}{% endif %}">‹ 上一周</a>
+    <span class="wlabel">
+      <b>{{ week_label }}</b>
+      {% if is_this_week %}
+        <span class="wtag">本周</span>
+      {% else %}
+        <a class="wback" href="/g/{{ group.code }}/{% if selected_game %}?game={{ selected_game.pk }}{% endif %}">回到本周</a>
+      {% endif %}
+    </span>
+    <a class="wbtn" href="/g/{{ group.code }}/?week={{ next_week }}{% if selected_game %}&game={{ selected_game.pk }}{% endif %}">下一周 ›</a>
+  </div>
 
   <div class="actions">
     {% if is_member %}
@@ -274,6 +307,9 @@
       <label class="scopetoggle">
         <input type="checkbox" id="scopeOnly"> 只改这个群
       </label>
+      <label class="scopetoggle">
+        <input type="checkbox" id="weekOnly"> 只改这一周
+      </label>
       <span class="pstat" id="pstat"></span>
     </div>
   {% endif %}
@@ -288,10 +324,10 @@
 
   <div class="gamebar">
     <span class="glabel">大家有空的游戏</span>
-    <a class="gchip {% if not selected_game %}on{% endif %}" href="/g/{{ group.code }}/">全部</a>
+    <a class="gchip {% if not selected_game %}on{% endif %}" href="/g/{{ group.code }}/?week={{ week_key }}">全部</a>
     {% for g in games %}
       <a class="gchip {% if selected_game and selected_game.pk == g.game_id %}on{% endif %}"
-         href="/g/{{ group.code }}/?game={{ g.game_id }}">{{ g.game__name }} <span class="gn">{{ g.owner_count }}</span></a>
+         href="/g/{{ group.code }}/?week={{ week_key }}&game={{ g.game_id }}">{{ g.game__name }} <span class="gn">{{ g.owner_count }}</span></a>
     {% empty %}
       <span class="ghint">
         还没有人勾游戏。
@@ -369,9 +405,11 @@
 
   {% if is_member %}
   const MARK_URL = "{% url 'mark_hour' group.code %}";
+  const WEEK_KEY = "{{ week_key }}";
   const grid = document.getElementById('grid');
   const popup = document.getElementById('popup');
   const scopeOnly = document.getElementById('scopeOnly');
+  const weekOnly = document.getElementById('weekOnly');
   const pstat = document.getElementById('pstat');
 
   let anchor = null;         // 鼠标按下的起点 {day, hour, cell}
@@ -468,6 +506,8 @@
       hour_end: String(to),
       state: state || '',
       scope: (scopeOnly && scopeOnly.checked) ? 'group' : 'global',
+      week: WEEK_KEY,
+      only_week: (weekOnly && weekOnly.checked) ? '1' : '0',
     });
 
     // 请求排队：网络慢的时候连点几下，回来的顺序才不会乱

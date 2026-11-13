@@ -76,7 +76,10 @@ def pin_group(request, code):
 
 
 def group_heatmap(request, code):
-    """某个群的周时间热力图。可以用 ?game=ID 只看某一款游戏。"""
+    """某个群的周时间热力图。
+
+    可以用 ?game=ID 只看某一款游戏，用 ?week=2026-W46 看别的周。
+    """
     group = get_object_or_404(Group, code=code)
 
     is_member = False
@@ -93,8 +96,15 @@ def group_heatmap(request, code):
     if raw_game.isdigit():
         selected_game = Game.objects.filter(pk=int(raw_game)).first()
 
-    rows = services.build_rows_with_mine(group, request.user, only_game=selected_game)
+    # 看哪一周：默认本周，允许 ?week= 前后翻
+    this_week = services.current_week_key()
+    raw_week = request.GET.get('week', '')
+    week_key = raw_week if services.is_week_key(raw_week) else this_week
+
+    rows = services.build_rows_with_mine(
+        group, request.user, week_key=week_key, only_game=selected_game)
     summary = services.build_summary(group, rows)
+    summary['week_key'] = week_key
     days = [{'index': i, 'name': n} for i, n in enumerate(services.DAY_NAMES)]
 
     if selected_game is not None:
@@ -112,6 +122,12 @@ def group_heatmap(request, code):
         'is_member': is_member,
         'games': games,
         'selected_game': selected_game,
+        'week_key': week_key,
+        'this_week': this_week,
+        'is_this_week': week_key == this_week,
+        'week_label': services.week_label(week_key),
+        'prev_week': services.shift_week(week_key, -1),
+        'next_week': services.shift_week(week_key, 1),
     })
 
 
@@ -159,15 +175,25 @@ def mark_hour(request, code):
     # scope=group 只改这个群；其余情况写人级默认，对所有群生效
     target_group = group if request.POST.get('scope') == 'group' else None
 
-    # 点的是「这一周的星期几」，但存的是「周期第几天」——
-    # 周期为 7 时两者相同；周期为 14 / 4 时要按日期换算。
-    week_key = services.current_week_key()
-    day = services.week_start(week_key) + timedelta(days=weekday)
-    cycle_day = services.phase_of(request.user, day)
+    # 看的是哪一周。前端会带过来；不带就当本周。
+    raw_week = request.POST.get('week', '')
+    week_key = raw_week if services.is_week_key(raw_week) else services.current_week_key()
 
-    services.set_span(request.user, target_group, cycle_day, start_hour, end_hour, state)
+    # only_week=1 → 只覆盖这一周，循环规律不动
+    only_week = request.POST.get('only_week') == '1'
 
-    rows = services.build_rows_with_mine(group, request.user)
+    if only_week:
+        services.set_span_week(
+            request.user, target_group, week_key, weekday, start_hour, end_hour, state)
+    else:
+        # 点的是「这一周的星期几」，但存的是「周期第几天」——
+        # 周期为 7 时两者相同；周期为 14 / 4 时要按日期换算。
+        day = services.week_start(week_key) + timedelta(days=weekday)
+        cycle_day = services.phase_of(request.user, day)
+        services.set_span(
+            request.user, target_group, cycle_day, start_hour, end_hour, state)
+
+    rows = services.build_rows_with_mine(group, request.user, week_key=week_key)
     cells = [
         _cell_json(rows[hour]['cells'][weekday], hour)
         for hour in range(start_hour, end_hour)

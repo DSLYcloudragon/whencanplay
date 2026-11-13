@@ -314,6 +314,25 @@ def my_schedule(request):
     # 改过周期之后，落在当前周期之外的老数据也要列出来，不能"看不见但还在"
     orphans = [r for r in ranges if r.weekday >= cycle_days]
 
+    # 周期网格：和群热力图一个样子，只是画的是自己的周期表
+    states = services.cycle_states(request.user)
+    grid_days = [
+        {'index': i, 'name': services.day_name(request.user, i)}
+        for i in range(cycle_days)
+    ]
+    grid_rows = []
+    for hour in range(24):
+        cells = []
+        for i in range(cycle_days):
+            st = states.get((i, hour))
+            cells.append({
+                'day': i,
+                'state': st or '',
+                'cls': 'is-free' if st == Availability.STATE_FREE
+                else ('is-busy' if st == Availability.STATE_BUSY else ''),
+            })
+        grid_rows.append({'hour': hour, 'cells': cells})
+
     return render(request, 'core/schedule.html', {
         'form': form,
         'days': days,
@@ -322,7 +341,38 @@ def my_schedule(request):
         'next_url': next_url,
         'cycle_days': cycle_days,
         'cycle_anchor': anchor,
+        'grid_days': grid_days,
+        'grid_rows': grid_rows,
     })
+
+
+@login_required
+@require_POST
+def schedule_mark(request):
+    """在「我的时间」的周期网格上点选：点一格或拖一段。"""
+    try:
+        day = int(request.POST['day'])
+        start_hour = int(request.POST['hour_start'])
+        end_hour = int(request.POST['hour_end'])
+    except (KeyError, ValueError):
+        return JsonResponse({'ok': False, 'error': '参数不对'}, status=400)
+
+    n = services.cycle_of(request.user)[0]
+    if not (0 <= day < n and 0 <= start_hour < 24 and start_hour < end_hour <= 24):
+        return JsonResponse({'ok': False, 'error': '参数不对'}, status=400)
+
+    state = request.POST.get('state') or None
+    if state not in (None, Availability.STATE_FREE, Availability.STATE_BUSY):
+        return JsonResponse({'ok': False, 'error': '状态不对'}, status=400)
+
+    services.set_span(request.user, None, day, start_hour, end_hour, state)
+
+    states = services.cycle_states(request.user)
+    cells = [
+        {'hour': hour, 'state': states.get((day, hour))}
+        for hour in range(start_hour, end_hour)
+    ]
+    return JsonResponse({'ok': True, 'cells': cells})
 
 
 @login_required

@@ -1,92 +1,121 @@
-<!DOCTYPE html>
 {% load static %}
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>我的每周作息 · Free Window</title>
+  <title>我的时间 · Free Window</title>
   <style>
     :root {
-      --bg: #0d0f13;
-      --panel: #151920;
-      --line: #232932;
-      --text: #e6e9ef;
-      --muted: #8b93a1;
-      --accent: #4ea1ff;
-      --danger: #ff6b6b;
+      --bg: #0d0f13; --panel: #151920; --line: #232932;
+      --text: #e6e9ef; --muted: #8b93a1; --accent: #4ea1ff;
+      --ok: #3ddc97; --danger: #ff6b6b;
     }
     * { box-sizing: border-box; }
     body {
-      margin: 0;
-      padding: 32px 24px 64px;
+      margin: 0; padding: 32px 24px 64px;
       background: radial-gradient(1400px 700px at 50% -15%, #17202c 0%, var(--bg) 62%);
       color: var(--text);
       font-family: -apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
-      font-size: 14px;
-      line-height: 1.6;
+      font-size: 14px; line-height: 1.6;
     }
-    .wrap { max-width: 760px; margin: 0 auto; }
+    .wrap { max-width: 980px; margin: 0 auto; }
 
     .topbar { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
     h1 { margin: 0; font-size: 22px; }
     .topright { margin-left: auto; display: flex; align-items: center; gap: 14px; font-size: 13px; }
     .topright a { color: var(--muted); text-decoration: none; }
     .topright a:hover { color: var(--accent); }
-    .topright .who { color: var(--text); }
-    .logoutform { margin: 0; display: inline; }
-    .logoutbtn {
-      background: none; border: 0; padding: 0; cursor: pointer;
-      color: var(--muted); font-size: 13px; font-family: inherit;
-    }
-    .logoutbtn:hover { color: var(--accent); }
-    .sub { margin: 0 0 22px; color: var(--muted); font-size: 13px; }
+    .sub { color: var(--muted); margin: 6px 0 20px; font-size: 13.5px; }
+    .sub a { color: var(--accent); text-decoration: none; }
 
     .card {
       background: var(--panel); border: 1px solid var(--line);
-      border-radius: 12px; padding: 18px 20px; margin-bottom: 18px;
+      border-radius: 12px; padding: 18px 20px; margin-bottom: 16px;
     }
-    .card h2 { margin: 0 0 14px; font-size: 15px; font-weight: 600; }
+    .card h2 { font-size: 15px; margin: 0 0 14px; font-weight: 600; }
 
+    /* ---------- 周期网格 ---------- */
+    .gridwrap { overflow-x: auto; padding-bottom: 4px; }
+    table.cgrid { border-collapse: separate; border-spacing: 2px; }
+    .cgrid th {
+      font-weight: 400; font-size: 11.5px; color: var(--muted);
+      padding: 2px 4px; white-space: nowrap;
+    }
+    .cgrid thead th { padding-bottom: 6px; }
+    .cgrid th.hcol { text-align: right; padding-right: 8px; font-variant-numeric: tabular-nums; }
+    .cgrid td.ccell {
+      width: 46px; min-width: 46px; height: 20px;
+      background: #10141a; border-radius: 4px;
+      cursor: pointer; user-select: none;
+      transition: background .08s;
+    }
+    .cgrid td.ccell:hover { background: #1a2029; }
+    .cgrid td.ccell.is-free { background: rgba(61, 220, 151, .32); }
+    .cgrid td.ccell.is-busy { background: rgba(255, 107, 107, .28); }
+    .cgrid td.ccell.sel { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .cgrid td.ccell.pending { opacity: .55; }
+
+    .legend { display: flex; gap: 18px; font-size: 12px; color: var(--muted); margin-top: 12px; }
+    .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+    /* ---------- 弹出菜单 ---------- */
+    #popup {
+      position: fixed; z-index: 60; min-width: 170px;
+      background: #1b2029; border: 1px solid #2b323d; border-radius: 10px;
+      padding: 6px; box-shadow: 0 16px 38px rgba(0, 0, 0, .6); display: none;
+    }
+    #popup .ttl { font-size: 12px; color: var(--muted); padding: 5px 10px 7px; }
+    #popup button {
+      display: block; width: 100%; text-align: left;
+      background: none; border: 0; color: var(--text);
+      padding: 8px 10px; border-radius: 7px; cursor: pointer;
+      font-size: 13px; font-family: inherit;
+    }
+    #popup button:hover { background: rgba(255, 255, 255, .08); }
+    #popup button.f:hover { color: var(--ok); }
+    #popup button.b:hover { color: var(--danger); }
+
+    /* ---------- 表单 ---------- */
     .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
     .f { display: flex; flex-direction: column; gap: 5px; }
     .f label { font-size: 12.5px; color: var(--muted); }
     select, input[type=time] {
       background: #0f1319; border: 1px solid var(--line); border-radius: 8px;
-      color: var(--text); padding: 9px 11px; font-size: 14px; font-family: inherit;
+      color: var(--text); padding: 8px 10px; font-size: 13.5px; font-family: inherit;
     }
     select:focus, input:focus { outline: none; border-color: var(--accent); }
     button.primary {
-      background: var(--accent); color: #06121f; border: 0; border-radius: 9px;
-      padding: 10px 20px; font-size: 14px; font-weight: 700; cursor: pointer;
-      font-family: inherit;
+      background: var(--accent); border: 0; color: #06121f; font-weight: 700;
+      padding: 9px 20px; border-radius: 9px; cursor: pointer;
+      font-size: 13.5px; font-family: inherit;
     }
-    button.primary:hover { filter: brightness(1.1); }
-
-    .err { color: var(--danger); font-size: 12.5px; }
-    .help { color: var(--muted); font-size: 12px; }
+    button.primary:hover { filter: brightness(1.08); }
+    .help { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
 
     .item {
       display: flex; align-items: center; gap: 12px;
-      padding: 9px 0; border-bottom: 1px solid var(--line);
+      padding: 9px 0; border-bottom: 1px solid rgba(255, 255, 255, .04);
+      font-size: 13.5px;
     }
     .item:last-child { border-bottom: 0; }
-    .dayname { width: 46px; color: var(--muted); font-size: 13px; }
-    .range { font-variant-numeric: tabular-nums; font-size: 14px; }
+    .dayname { min-width: 62px; color: var(--text); }
+    .range { font-variant-numeric: tabular-nums; }
     .tag {
       font-size: 11.5px; padding: 2px 8px; border-radius: 20px;
-      background: rgba(78,161,255,.15); color: #9fcaff;
+      background: rgba(78, 161, 255, .15); color: #9fcaff;
     }
-    .tag.maybe { background: rgba(255,193,7,.14); color: #ffd166; }
-    .tag.busy { background: rgba(255,107,107,.14); color: #ff9b9b; }
+    .tag.busy { background: rgba(255, 107, 107, .14); color: #ff9b9b; }
     .cross { color: var(--muted); font-size: 12px; }
     .del {
       margin-left: auto; background: none; border: 0; cursor: pointer;
       color: var(--muted); font-size: 12.5px; font-family: inherit; padding: 4px 6px;
     }
     .del:hover { color: var(--danger); }
-
     .empty { color: var(--muted); font-size: 13.5px; padding: 8px 0; }
     .count { color: var(--muted); font-size: 12.5px; margin-left: 8px; }
+    .err { color: var(--danger); font-size: 13px; margin-top: 10px; }
+    #pstat { font-size: 12.5px; color: var(--muted); margin-left: 10px; }
   </style>
   <link rel="stylesheet" href="{% static 'core/custom.css' %}">
 </head>
@@ -101,13 +130,42 @@
     </div>
   </div>
   <p class="sub">
-    这里填的是「我一般什么时候有空」。填一次，对所有加入的群都生效。<br>
-    现在的作息周期是 <b>{{ cycle_days }} 天</b>（<a href="{% url 'my_cycle' %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}" style="color:var(--accent);text-decoration:none">改周期</a>）。
-    结束时间如果比开始早，就表示跨到第二天凌晨（比如 22:00 到 02:00）。
+    这里填的是「我一般什么时候有空」。填一次，对所有加入的群都生效。
+    现在的作息周期是 <b>{{ cycle_days }} 天</b>（<a href="{% url 'my_cycle' %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}">改周期</a>）。
   </p>
 
   <div class="card">
-    <h2>加一段时间</h2>
+    <h2>在表上点一下，或者按住拖一段<span id="pstat"></span></h2>
+    <div class="gridwrap">
+      <table class="cgrid" id="cgrid">
+        <thead>
+          <tr>
+            <th></th>
+            {% for d in grid_days %}<th>{{ d.name }}</th>{% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in grid_rows %}
+            <tr>
+              <th class="hcol">{{ row.hour|stringformat:"02d" }}:00</th>
+              {% for c in row.cells %}
+                <td class="ccell {{ c.cls }}" data-day="{{ c.day }}" data-hour="{{ row.hour }}"></td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="legend">
+      <span><i style="background:rgba(61,220,151,.32)"></i>有空</span>
+      <span><i style="background:rgba(255,107,107,.28)"></i>没空</span>
+      <span><i style="background:#10141a;border:1px solid #232932"></i>没填</span>
+      <span>松开鼠标后会弹出菜单，选完才生效</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>精确添加（可以填到半小时）</h2>
     <form method="post" novalidate>
       {% csrf_token %}
       {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
@@ -130,8 +188,9 @@
         </div>
         <button class="primary" type="submit">添加</button>
       </div>
+      <p class="help">结束时间如果比开始早，就表示跨到第二天凌晨（比如 22:00 到 02:00）。</p>
       {% if form.errors %}
-        <div class="err" style="margin-top:10px">
+        <div class="err">
           {% for field in form %}{% for e in field.errors %}{{ e }} {% endfor %}{% endfor %}
         </div>
       {% endif %}
@@ -140,9 +199,8 @@
 
   <div class="card">
     <h2>我填的时间<span class="count">共 {{ total }} 段</span></h2>
-
     {% if not total %}
-      <p class="empty">还一段都没填。上面加一段时间试试。</p>
+      <p class="empty">还一段都没填。上面点格子试试。</p>
     {% else %}
       {% for day in days %}
         {% for r in day.ranges %}
@@ -150,9 +208,7 @@
             <span class="dayname">{{ day.name }}</span>
             <span class="range">{{ r.start|time:"H:i" }} – {{ r.end|time:"H:i" }}</span>
             {% if r.end < r.start %}<span class="cross">跨到次日</span>{% endif %}
-            <span class="tag {% if r.state == 'busy' %}busy{% endif %}">
-              {{ r.get_state_display }}
-            </span>
+            <span class="tag {% if r.state == 'busy' %}busy{% endif %}">{{ r.get_state_display }}</span>
             <form method="post" action="{% url 'delete_range' r.pk %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}">
               {% csrf_token %}
               <button class="del" type="submit">删除</button>
@@ -184,6 +240,177 @@
   {% endif %}
 
 </div>
+
+<div id="popup">
+  <div class="ttl" id="pttl"></div>
+  <button type="button" class="f" data-state="free">有空</button>
+  <button type="button" class="b" data-state="busy">没空</button>
+  <button type="button" data-state="">清除</button>
+</div>
+
 {% include "core/_footer.html" %}
+
+<script>
+(function () {
+  var grid = document.getElementById('cgrid');
+  if (!grid) return;
+
+  var popup = document.getElementById('popup');
+  var pttl = document.getElementById('pttl');
+  var pstat = document.getElementById('pstat');
+  var MARK = "{% url 'schedule_mark' %}";
+  var csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+  var csrf = csrfInput ? csrfInput.value : '';
+
+  var dragging = false;
+  var anchor = null;
+  var pending = null;
+  var queue = Promise.resolve();
+
+  var dayNames = [
+    {% for d in grid_days %}"{{ d.name }}"{% if not forloop.last %},{% endif %}{% endfor %}
+  ];
+
+  function cellAt(day, hour) {
+    return grid.querySelector('td[data-day="' + day + '"][data-hour="' + hour + '"]');
+  }
+
+  function clearSel() {
+    var s = grid.querySelectorAll('td.sel');
+    for (var i = 0; i < s.length; i++) s[i].classList.remove('sel');
+  }
+
+  function markSel(day, from, to) {
+    for (var h = from; h < to; h++) {
+      var el = cellAt(day, h);
+      if (el) el.classList.add('sel');
+    }
+  }
+
+  function paint(el, state) {
+    el.classList.remove('is-free', 'is-busy');
+    if (state) el.classList.add('is-' + state);
+  }
+
+  function hidePopup() {
+    popup.style.display = 'none';
+    pending = null;
+  }
+
+  function showPopup(x, y) {
+    if (!pending) return;
+    pttl.textContent = dayNames[pending.day] + '　' +
+      pad(pending.from) + ':00 – ' + pad(pending.to) + ':00';
+    popup.style.display = 'block';
+    var w = popup.offsetWidth, h = popup.offsetHeight;
+    popup.style.left = Math.min(x, window.innerWidth - w - 12) + 'px';
+    popup.style.top = Math.min(y, window.innerHeight - h - 12) + 'px';
+  }
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function apply(day, from, to, state) {
+    for (var h = from; h < to; h++) {
+      var el = cellAt(day, h);
+      if (el) {
+        paint(el, state || '');
+        el.classList.add('pending');
+      }
+    }
+
+    var body = new URLSearchParams({
+      day: String(day),
+      hour_start: String(from),
+      hour_end: String(to),
+      state: state || ''
+    });
+
+    queue = queue.then(function () {
+      var timer = setTimeout(function () { }, 1);
+      return fetch(MARK, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrf,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: body,
+        credentials: 'same-origin'
+      }).then(function (res) {
+        return res.json();
+      }).then(function (json) {
+        if (!json.ok) { pstat.textContent = json.error || '保存失败'; return; }
+        json.cells.forEach(function (c) {
+          var el = cellAt(day, c.hour);
+          if (el) paint(el, c.state || '');
+        });
+        pstat.textContent = '';
+      }).catch(function () {
+        pstat.textContent = '保存失败，刷新页面确认一下';
+      }).then(function () {
+        clearTimeout(timer);
+        for (var h = from; h < to; h++) {
+          var el = cellAt(day, h);
+          if (el) el.classList.remove('pending');
+        }
+      });
+    });
+  }
+
+  grid.addEventListener('mousedown', function (e) {
+    if (e.button !== 0) return;
+    var td = e.target.closest('td.ccell');
+    if (!td) return;
+    e.preventDefault();
+    hidePopup();
+    clearSel();
+    dragging = true;
+    anchor = { day: +td.dataset.day, hour: +td.dataset.hour };
+    pending = { day: anchor.day, from: anchor.hour, to: anchor.hour + 1 };
+    markSel(pending.day, pending.from, pending.to);
+  });
+
+  grid.addEventListener('mousemove', function (e) {
+    if (!dragging) return;
+    if (e.buttons === 0) { dragging = false; return; }
+    var td = e.target.closest('td.ccell');
+    if (!td) return;
+    var day = +td.dataset.day, hour = +td.dataset.hour;
+    if (day !== anchor.day) return;
+    var from = Math.min(anchor.hour, hour);
+    var to = Math.max(anchor.hour, hour) + 1;
+    clearSel();
+    markSel(day, from, to);
+    pending = { day: day, from: from, to: to };
+  });
+
+  document.addEventListener('mouseup', function (e) {
+    if (!dragging) return;
+    dragging = false;
+    if (!pending) return;
+    showPopup(e.clientX, e.clientY);
+  });
+
+  popup.addEventListener('click', function (e) {
+    var btn = e.target.closest('button');
+    if (!btn || !pending) return;
+    var p = pending;
+    hidePopup();
+    clearSel();
+    apply(p.day, p.from, p.to, btn.dataset.state);
+  });
+
+  document.addEventListener('mousedown', function (e) {
+    if (!popup.contains(e.target) && !e.target.closest('td.ccell')) hidePopup();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { hidePopup(); clearSel(); }
+  });
+
+  grid.addEventListener('contextmenu', function (e) {
+    if (e.target.closest('td.ccell')) e.preventDefault();
+  });
+})();
+</script>
 </body>
 </html>

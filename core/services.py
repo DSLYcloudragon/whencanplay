@@ -419,6 +419,25 @@ def build_rows_with_mine(group, viewer, week_key=None, only_game=None):
     return rows
 
 
+def cycle_states(user):
+    """这个人整个周期、每一格的状态。返回 {(周期第几天, 小时): 'free' / 'busy'}。
+
+    给「填我的时间」的网格用 —— 它和群热力图长得一样，但画的是自己的周期表。
+    """
+    n, _ = cycle_of(user)
+    entries = Availability.objects.filter(user=user, group__isnull=True, week_key='')
+
+    base = datetime.date(2026, 1, 5)   # 随便一个周一，只用来做坐标原点
+    result = {}
+    for item in entries:
+        if not (0 <= item.weekday < n):
+            continue
+        day = base + datetime.timedelta(days=item.weekday)
+        for col, hour in _expand_entry(day, base, item):
+            result[(col % n, hour)] = item.state
+    return result
+
+
 def group_game_list(group):
     """这个群里大家拥有的游戏，按拥有者数量从多到少排。
 

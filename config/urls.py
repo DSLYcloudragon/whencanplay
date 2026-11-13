@@ -22,6 +22,7 @@ urlpatterns = [
 
     # 我的时间
     path('me/schedule/', core_views.my_schedule, name='my_schedule'),
+    path('me/schedule/mark/', core_views.schedule_mark, name='schedule_mark'),
     path('me/cycle/', core_views.my_cycle, name='my_cycle'),
     path('me/schedule/<int:pk>/delete/', core_views.delete_range, name='delete_range'),
 
